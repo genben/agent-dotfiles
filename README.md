@@ -92,6 +92,22 @@ A structured workflow for tackling complex tasks in large codebases, inspired by
 | `/hl_validate_plan` | Validate implementation against the plan |
 | `/hl_describe_pr` | Generate PR descriptions from templates |
 
+### 2. Spec-Driven Workflow
+
+A variation that starts with a specification phase to clarify requirements before research. See [full documentation](docs/SpecDrivenWorkflow.md).
+
+| Command | Description |
+|---------|-------------|
+| `/mr_create_spec` | Interview user to identify requirements and edge cases; produce `spec.md` |
+| `/mr_research_codebase` | Research codebase relevant to the spec; produce `research.md` |
+| `/mr_plan` | Create `plan.md` and `plan_phase_N.md` from spec + research |
+| `/mr_implement_plan` | Implement using TDD with plan as source of truth |
+
+**Flow variations** (depending on task complexity):
+- **Full**: Spec → Research → Plan → Implement
+- **Short**: Spec → Plan Mode (Shift+Tab in Claude Code) → Implement
+- **Straight**: Spec → Implement (for simple, well-defined features)
+
 ## License
 
 MIT
