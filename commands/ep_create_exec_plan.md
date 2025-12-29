@@ -90,7 +90,7 @@ After ALL chunks are approved:
 **STOP HERE.** Do NOT offer to implement the plan yet.
 
 Tell the user:
-> "The plan has been saved to [path]. Please review the complete document. When you're ready to implement, run `/mr_implement_exec_plan`."
+> "The plan has been saved to [path]. Please review the complete document. When you're ready to implement, run `/ep_implement_exec_plan`."
 
 Wait for the user to explicitly request implementation before proceeding.
 
