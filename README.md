@@ -109,6 +109,25 @@ A variation that starts with a specification phase to clarify requirements befor
 - **Short**: Spec → Plan Mode (Shift+Tab in Claude Code) → Implement
 - **Straight**: Spec → Implement (for simple, well-defined features)
 
+### 3. Executable Plan Workflow
+
+A simplified two-step workflow combining research and planning into one phase. Inspired by [OpenAI Codex Execution Plans](https://cookbook.openai.com/articles/codex_exec_plans) and Aaron Friel's talk [Shipping with Codex](https://www.youtube.com/watch?v=Gr41tYOzE20&t=770s). See [full documentation](docs/ExecutablePlanWorkflow.md).
+
+| Command | Description |
+|---------|-------------|
+| `/ep_create_exec_plan` | Analyze spec, research codebase, and create executable plan |
+| `/ep_implement_exec_plan` | Implement autonomously, maintaining the plan as a living document |
+
+**Key features:**
+- Self-contained plans that any novice agent can follow
+- Living document with progress, decisions, and discoveries
+- Autonomous implementation without constant user prompts
+- Session resumption from the plan document
+
+**Recommended flow**: Create spec first with `/mr_create_spec`, then use this workflow.
+
+Designed for **Codex** (400K context, autonomous hours-long work, meticulous research). Works with Claude Code, but re-read the plan if auto-compact kicks in.
+
 ## License
 
 MIT
