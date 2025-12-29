@@ -12,6 +12,7 @@ This repository contains AI coding agent configurations (commands, skills, templ
 - `claude/agents/` - Agent definitions
 - `claude/skills/` - Skill definitions
 - `claude/templates/` - Reusable templates
+- `claude/scripts/` - Helper scripts
 
 ## Installation
 

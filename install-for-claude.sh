@@ -38,12 +38,14 @@ while [[ $# -gt 0 ]]; do
             echo "Install agent-dotfiles for Claude Code CLI"
             echo ""
             echo "This script creates symlinks from this repository to ~/.claude/, making"
-            echo "custom commands, agents, and skills available in Claude Code CLI."
+            echo "custom commands, agents, skills, and templates available in Claude Code CLI."
             echo ""
             echo "Symlinks created:"
-            echo "  claude/commands/ -> ~/.claude/commands/"
-            echo "  claude/agents/   -> ~/.claude/agents/"
-            echo "  claude/skills/   -> ~/.claude/skills/"
+            echo "  claude/commands/  -> ~/.claude/commands/"
+            echo "  claude/agents/    -> ~/.claude/agents/"
+            echo "  claude/skills/    -> ~/.claude/skills/"
+            echo "  claude/templates/ -> ~/.claude/templates/"
+            echo "  claude/scripts/   -> ~/.claude/scripts/"
             echo ""
             echo "The script is idempotent: running it multiple times is safe. Existing"
             echo "symlinks pointing to the correct location are left unchanged."
@@ -67,7 +69,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-DIRECTORIES=("commands" "agents" "skills")
+DIRECTORIES=("commands" "agents" "skills" "templates" "scripts")
 
 echo -e "${BOLD}Installing agent-dotfiles to ${CLAUDE_HOME}...${NC}"
 echo ""
@@ -173,6 +175,8 @@ for dir in "${DIRECTORIES[@]}"; do
 done
 
 echo ""
+echo "────────────────────────────────────────"
+echo ""
 
 # Exit with error if there were conflicts in non-interactive mode
 if [[ ${#errors[@]} -gt 0 ]]; then
@@ -182,16 +186,25 @@ if [[ ${#errors[@]} -gt 0 ]]; then
 fi
 
 # Summary
-if [[ ${#installed[@]} -gt 0 ]]; then
-    echo -e "${GREEN}Installed:${NC} ${installed[*]}"
-fi
-if [[ ${#already_linked[@]} -gt 0 ]]; then
-    echo -e "${BLUE}Already installed:${NC} ${already_linked[*]}"
-fi
-if [[ ${#skipped[@]} -gt 0 ]]; then
-    echo -e "${YELLOW}Skipped:${NC} ${skipped[*]}"
+if [[ ${#installed[@]} -gt 0 || ${#already_linked[@]} -gt 0 ]]; then
+    echo -e "${GREEN}Successfully installed (symlinks):${NC}"
+    echo ""
+    for dir in "${installed[@]}" "${already_linked[@]}"; do
+        echo -e "  ${CLAUDE_HOME}/${dir} => ${SCRIPT_DIR}/claude/${dir}"
+    done
+    echo ""
+    echo "Restart Claude Code or start a new session to use them."
 fi
 
-echo ""
-echo -e "${GREEN}Done!${NC} Your custom commands and skills are now available in Claude Code CLI."
-echo "Restart Claude Code or start a new session to use them."
+if [[ ${#skipped[@]} -gt 0 ]]; then
+    if [[ ${#installed[@]} -gt 0 || ${#already_linked[@]} -gt 0 ]]; then
+        echo ""
+        echo "────────────────────────────────────────"
+    fi
+    echo ""
+    echo -e "${RED}NOT INSTALLED (skipped due to directories already exist):${NC}"
+    echo ""
+    for dir in "${skipped[@]}"; do
+        echo -e "${RED}  ${CLAUDE_HOME}/${dir}${NC}"
+    done
+fi
