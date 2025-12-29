@@ -26,7 +26,6 @@ Use handoff commands to create a document with work summary and progress, allowi
 |---------|-------------|
 | [`/hl_create_handoff`](../commands/hl_create_handoff.md) | Create a concise handoff document to transfer work context to another session |
 | [`/hl_resume_handoff`](../commands/hl_resume_handoff.md) | Resume work from a handoff document through interactive context analysis |
-| [`/hl_describe_pr`](../commands/hl_describe_pr.md) | Generate comprehensive PR descriptions following repository templates, run verification checks |
 
 ## Sub-agents for Research
 

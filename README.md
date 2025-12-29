@@ -90,7 +90,6 @@ A structured workflow for tackling complex tasks in large codebases, inspired by
 |---------|-------------|
 | `/hl_report_plan_progress` | Save progress to the plan document |
 | `/hl_validate_plan` | Validate implementation against the plan |
-| `/hl_describe_pr` | Generate PR descriptions from templates |
 
 ### 2. Spec-Driven Workflow
 
@@ -127,6 +126,29 @@ A simplified two-step workflow combining research and planning into one phase. I
 **Recommended flow**: Create spec first with `/mr_create_spec`, then use this workflow.
 
 Designed for **Codex** (400K context, autonomous hours-long work, meticulous research). Works with Claude Code, but re-read the plan if auto-compact kicks in.
+
+## Helper Commands
+
+Utility commands that work across all workflows.
+
+**Git:**
+
+| Command | Description |
+|---------|-------------|
+| `/mr_commit` | Create git commits with user approval (no Claude attribution) |
+
+**Handoff:**
+
+| Command | Description |
+|---------|-------------|
+| `/mr_handoff` | Create handoff document for session transfer |
+| `/mr_resume_handoff` | Resume work from a handoff document |
+
+**Pull Requests:**
+
+| Command | Description |
+|---------|-------------|
+| `/mr_describe_pr` | Generate PR descriptions from repository templates |
 
 ## License
 
