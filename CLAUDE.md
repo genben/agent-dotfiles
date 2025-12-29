@@ -8,20 +8,20 @@ This repository contains AI coding agent configurations (commands, skills, templ
 
 ## Repository Structure
 
-- `claude/commands/` - Custom slash commands
-- `claude/agents/` - Agent definitions
-- `claude/skills/` - Skill definitions
-- `claude/templates/` - Reusable templates
-- `claude/scripts/` - Helper scripts
+- `commands/` - Custom slash commands (mapped to `prompts/` for Codex)
+- `agents/` - Agent definitions
+- `skills/` - Skill definitions
+- `templates/` - Reusable templates
+- `scripts/` - Helper scripts
 
 ## Installation
 
-Run the install script to symlink directories to `~/.claude/`:
-
 ```bash
-./install-for-claude.sh           # Interactive mode
-./install-for-claude.sh -n        # Non-interactive mode (for CI/automation)
-./uninstall-for-claude.sh         # Remove symlinks
+./install.sh claude               # Install for Claude Code
+./install.sh codex                # Install for Codex
+./install.sh claude -n            # Non-interactive mode (for CI/automation)
+./uninstall.sh claude             # Remove symlinks
+./uninstall.sh codex              # Remove symlinks
 ```
 
-Both scripts are idempotent and can be safely re-run.
+All scripts are idempotent and can be safely re-run.
