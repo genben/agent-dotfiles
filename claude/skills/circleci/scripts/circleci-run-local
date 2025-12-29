@@ -1,0 +1,146 @@
+#!/bin/bash
+#
+# circleci-run-local - Run CircleCI jobs locally
+#
+# Usage:
+#   circleci-run-local <job-name>           # Run a job locally
+#   circleci-run-local --list               # List available jobs
+#   circleci-run-local --help               # Show help
+#
+# Options:
+#   -e KEY=VALUE                        # Pass environment variable
+#   --no-checkout                       # Skip checkout step (for git worktrees)
+#
+
+set -e
+
+CONFIG_FILE=".circleci/config.yml"
+PROCESSED_CONFIG=""
+EXTRA_ARGS=()
+SKIP_CHECKOUT=false
+LIST_JOBS=false
+JOB_NAME=""
+
+show_help() {
+    cat << 'EOF'
+Usage: circleci-run-local [options] <job-name>
+
+Run CircleCI jobs locally using the CircleCI CLI.
+
+Options:
+  --list              List available jobs in the config
+  --no-checkout       Skip checkout step (useful for git worktrees)
+  -e KEY=VALUE        Pass environment variable to the job
+  -h, --help          Show this help message
+
+Examples:
+  circleci-run-local build                    # Run the 'build' job
+  circleci-run-local --list                   # List available jobs
+  circleci-run-local --no-checkout build      # Run without checkout (for worktrees)
+  circleci-run-local -e MY_VAR=value test     # Run with environment variable
+
+Notes:
+  - For config version 2.1+, the config is automatically processed
+  - For git worktrees, use --no-checkout to avoid checkout failures
+  - Cache steps (save_cache, restore_cache) are skipped locally
+EOF
+}
+
+list_jobs() {
+    if [[ ! -f "$CONFIG_FILE" ]]; then
+        echo "Error: $CONFIG_FILE not found"
+        exit 1
+    fi
+
+    echo "Processing config..."
+    local processed
+    processed=$(circleci config process "$CONFIG_FILE" 2>/dev/null)
+
+    echo ""
+    echo "Available jobs:"
+    echo "$processed" | grep -E "^  [a-zA-Z0-9._-]+:$" | sed 's/:$//' | sed 's/^  /  - /'
+}
+
+process_config() {
+    if [[ ! -f "$CONFIG_FILE" ]]; then
+        echo "Error: $CONFIG_FILE not found"
+        exit 1
+    fi
+
+    PROCESSED_CONFIG=$(mktemp /tmp/circleci-config.XXXXXX.yml)
+    trap "rm -f $PROCESSED_CONFIG" EXIT
+
+    echo "Processing config..."
+    circleci config process "$CONFIG_FILE" > "$PROCESSED_CONFIG"
+
+    if [[ "$SKIP_CHECKOUT" == "true" ]]; then
+        echo "Removing checkout step for worktree compatibility..."
+        sed -i.bak 's/- checkout/# - checkout (skipped)/' "$PROCESSED_CONFIG"
+        rm -f "${PROCESSED_CONFIG}.bak"
+    fi
+}
+
+run_job() {
+    local job="$1"
+    shift
+
+    process_config
+
+    echo "Running job: $job"
+    echo ""
+
+    local cmd=(circleci local execute -c "$PROCESSED_CONFIG" "$job")
+
+    # Add volume mount for current directory if checkout is skipped
+    if [[ "$SKIP_CHECKOUT" == "true" ]]; then
+        cmd+=(-v "$(pwd):/home/circleci/repo")
+    fi
+
+    # Add extra args (environment variables, etc.)
+    cmd+=("${EXTRA_ARGS[@]}")
+
+    "${cmd[@]}"
+}
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --list)
+            LIST_JOBS=true
+            shift
+            ;;
+        --no-checkout)
+            SKIP_CHECKOUT=true
+            shift
+            ;;
+        -e)
+            EXTRA_ARGS+=(-e "$2")
+            shift 2
+            ;;
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        -*)
+            echo "Unknown option: $1"
+            echo "Use --help for usage"
+            exit 1
+            ;;
+        *)
+            JOB_NAME="$1"
+            shift
+            ;;
+    esac
+done
+
+# Execute
+if [[ "$LIST_JOBS" == "true" ]]; then
+    list_jobs
+elif [[ -n "$JOB_NAME" ]]; then
+    run_job "$JOB_NAME"
+else
+    echo "Error: No job specified"
+    echo ""
+    show_help
+    exit 1
+fi
