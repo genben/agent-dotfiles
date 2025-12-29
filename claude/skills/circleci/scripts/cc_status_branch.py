@@ -2,26 +2,37 @@
 """Check CircleCI pipeline/workflow/job status for a branch and show failure output."""
 
 import json
+import os
+import re
 import sys
 from pathlib import Path
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-try:
-    import yaml
-except Exception as exc:  # pragma: no cover - used as a CLI helper
-    print(f"Missing yaml dependency: {exc}")
-    sys.exit(1)
-
 
 def load_token() -> str:
+    """Load CircleCI token from env vars or ~/.circleci/cli.yml."""
+    token = os.environ.get("CIRCLECI_CLI_TOKEN") or os.environ.get("CIRCLE_TOKEN")
+    if token:
+        return token
+
     config_path = Path.home() / ".circleci" / "cli.yml"
     if not config_path.exists():
         raise RuntimeError("CircleCI CLI config not found at ~/.circleci/cli.yml")
-    data = yaml.safe_load(config_path.read_text())
-    if not isinstance(data, dict) or not data.get("token"):
-        raise RuntimeError("CircleCI token missing in ~/.circleci/cli.yml")
-    return data["token"]
+
+    for line in config_path.read_text().splitlines():
+        line = line.split("#", 1)[0].strip()
+        if not line:
+            continue
+        match = re.match(r"^token\s*:\s*(.+)$", line)
+        if match:
+            token = match.group(1).strip()
+            if len(token) >= 2 and token[0] in "\"'" and token[-1] == token[0]:
+                token = token[1:-1]
+            if token:
+                return token
+
+    raise RuntimeError("CircleCI token not found in ~/.circleci/cli.yml")
 
 
 def api_get(token: str, base: str, path: str, params=None):
