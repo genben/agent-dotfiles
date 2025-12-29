@@ -10,6 +10,19 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLAUDE_HOME="${HOME}/.claude"
 INTERACTIVE=true
 
+# Convert absolute path to use ~/ if under home directory
+to_display_path() {
+    local path="$1"
+    if [[ "$path" == "$HOME"/* ]]; then
+        echo "~${path#$HOME}"
+    else
+        echo "$path"
+    fi
+}
+
+CLAUDE_HOME_DISPLAY="$(to_display_path "$CLAUDE_HOME")"
+SCRIPT_DIR_DISPLAY="$(to_display_path "$SCRIPT_DIR")"
+
 # Colors (disabled if not a terminal)
 if [[ -t 1 ]]; then
     RED='\033[0;31m'
@@ -101,7 +114,7 @@ for dir in "${DIRECTORIES[@]}"; do
         # Check if it points to the correct location
         current_target="$(readlink "$dest")"
         if [[ "$current_target" == "$src" ]]; then
-            echo -e "  ${GREEN}[OK]${NC} ${dir}: symlink already exists"
+            echo -e "  ${BLUE}[OK]${NC} ${dir}: symlink already exists"
             already_linked+=("$dir")
             continue
         else
@@ -190,7 +203,7 @@ if [[ ${#installed[@]} -gt 0 ]]; then
     echo -e "${GREEN}Successfully installed (symlinks):${NC}"
     echo ""
     for dir in "${installed[@]}"; do
-        echo "  ${CLAUDE_HOME}/${dir} => ${SCRIPT_DIR}/claude/${dir}"
+        echo -e "  ${GREEN}${CLAUDE_HOME_DISPLAY}/${dir}${NC} => ${SCRIPT_DIR_DISPLAY}/claude/${dir}"
     done
     echo ""
     echo "Restart Claude Code or start a new session to use them."
@@ -205,7 +218,7 @@ if [[ ${#already_linked[@]} -gt 0 ]]; then
     echo -e "${BLUE}Already installed (no changes):${NC}"
     echo ""
     for dir in "${already_linked[@]}"; do
-        echo "  ${CLAUDE_HOME}/${dir} => ${SCRIPT_DIR}/claude/${dir}"
+        echo -e "  ${BLUE}${CLAUDE_HOME_DISPLAY}/${dir}${NC} => ${SCRIPT_DIR_DISPLAY}/claude/${dir}"
     done
 fi
 
@@ -218,6 +231,6 @@ if [[ ${#skipped[@]} -gt 0 ]]; then
     echo -e "${RED}NOT INSTALLED (skipped due to directories already exist):${NC}"
     echo ""
     for dir in "${skipped[@]}"; do
-        echo -e "${RED}  ${CLAUDE_HOME}/${dir}${NC}"
+        echo -e "  ${RED}${CLAUDE_HOME_DISPLAY}/${dir}${NC}"
     done
 fi
