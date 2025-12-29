@@ -54,7 +54,7 @@ description: Research the existing codebase relevant to spec.md; produce researc
 
 ## Template (required)
 Use this template as the starting structure for the research doc:
-- `~/.agent/templates/research_template.md`
+- `~/.claude/templates/research_template.md`
 
 If the template file is missing, notify the user and stop. Only proceed after the user provides the template inline or creates the template file.
 

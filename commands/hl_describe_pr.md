@@ -9,7 +9,7 @@ You are tasked with generating a comprehensive pull request description followin
 ## Steps to follow:
 
 1. **Read the PR description template:**
-   - First, check if PR description template file exits (either at `docs/templates/pr_description.md` or `~/.claude/templates/pr_description.md`). Use Read() command to check these files, not Search.
+   - First, check if PR description template file exists (either at `docs/templates/pr_description_template.md` or `~/.claude/templates/pr_description_template.md`). Use Read() command to check these files, not Search.
    - If it doesn't exist, inform the user that they need to create a PR description in either of those locationsl 
    - Read the template carefully to understand all sections and requirements
 

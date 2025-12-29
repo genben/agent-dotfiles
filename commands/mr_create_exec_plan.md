@@ -23,7 +23,7 @@ If the user HAS provided requirements (in `$ARGUMENTS` or referenced files):
 ## Read the Specification
 
 Read the Executable Plan Specification to guide your work:
-- File: `~/.agent/templates/ExecPlanSpec.md`
+- File: `~/.claude/templates/ExecPlanSpec.md`
 - Read this file in FULL (no limit/offset) to ensure you follow the spec exactly
 
 ## Research Phase

@@ -75,7 +75,7 @@ Prefer additive code changes followed by subtractions that keep tests passing. P
  
 This Execution Plan is a living document. The sections `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` must be kept up to date as work proceeds.
  
-This document must be maintained in accordance with [Executable Plan Specification](~/.agent/templates/ExecPlanSpec.md).
+This document must be maintained in accordance with [Executable Plan Specification](~/.claude/templates/ExecPlanSpec.md).
  
 ## Purpose / Big Picture
  

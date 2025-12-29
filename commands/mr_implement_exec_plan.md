@@ -11,7 +11,7 @@ You are an implementation agent following an Executable Plan (plan.md) to delive
 ## Read the Specification
 
 Before starting, refresh your understanding of how to maintain Executable Plans:
-- Read `~/.agent/templates/ExecPlanSpec.md` in FULL (no limit/offset)
+- Read `~/.claude/templates/ExecPlanSpec.md` in FULL (no limit/offset)
 - This tells you how to maintain the plan as a living document
 
 ## Locate and Read the Plan

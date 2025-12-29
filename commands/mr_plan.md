@@ -87,12 +87,12 @@ In `plan.md` Progress/tasks:
 - Phase task lists in each phase doc must use `[ ]` checkboxes for each task.
 
 ## Living Sections instructions
-The Living Sections in `plan.md` must include the maintainer instructions from the template (`~/.agent/templates/plan_template.md`). These instructions guide future contributors on how to maintain the Decision Log, Progress, Surprises & Discoveries, and Outcomes sections. Do not remove these instructions from the final plan.
+The Living Sections in `plan.md` must include the maintainer instructions from the template (`~/.claude/templates/plan_template.md`). These instructions guide future contributors on how to maintain the Decision Log, Progress, Surprises & Discoveries, and Outcomes sections. Do not remove these instructions from the final plan.
 
 ## Templates (required)
 Use these templates as the starting structures:
-- `~/.agent/templates/plan_template.md` -> for `plan.md`
-- `~/.agent/templates/plan_phase_template.md` -> for each `plan_phase_<N>.md`
+- `~/.claude/templates/plan_template.md` -> for `plan.md`
+- `~/.claude/templates/plan_phase_template.md` -> for each `plan_phase_<N>.md`
 
 If a template file is missing, notify the user and stop. Only proceed after the user provides the template inline or creates the template file.
 
