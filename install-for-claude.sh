@@ -186,14 +186,27 @@ if [[ ${#errors[@]} -gt 0 ]]; then
 fi
 
 # Summary
-if [[ ${#installed[@]} -gt 0 || ${#already_linked[@]} -gt 0 ]]; then
+if [[ ${#installed[@]} -gt 0 ]]; then
     echo -e "${GREEN}Successfully installed (symlinks):${NC}"
     echo ""
-    for dir in "${installed[@]}" "${already_linked[@]}"; do
-        echo -e "  ${CLAUDE_HOME}/${dir} => ${SCRIPT_DIR}/claude/${dir}"
+    for dir in "${installed[@]}"; do
+        echo "  ${CLAUDE_HOME}/${dir} => ${SCRIPT_DIR}/claude/${dir}"
     done
     echo ""
     echo "Restart Claude Code or start a new session to use them."
+fi
+
+if [[ ${#already_linked[@]} -gt 0 ]]; then
+    if [[ ${#installed[@]} -gt 0 ]]; then
+        echo ""
+        echo "────────────────────────────────────────"
+        echo ""
+    fi
+    echo -e "${BLUE}Already installed (no changes):${NC}"
+    echo ""
+    for dir in "${already_linked[@]}"; do
+        echo "  ${CLAUDE_HOME}/${dir} => ${SCRIPT_DIR}/claude/${dir}"
+    done
 fi
 
 if [[ ${#skipped[@]} -gt 0 ]]; then
