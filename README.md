@@ -102,6 +102,7 @@ A variation that starts with a specification phase to clarify requirements befor
 | `/mr_research_codebase` | Research codebase relevant to the spec; produce `research.md` |
 | `/mr_plan` | Create `plan.md` and `plan_phase_N.md` from spec + research |
 | `/mr_implement_plan` | Implement using TDD with plan as source of truth |
+| `/mr_validate_implementation` | Validate implementation against spec/plan; run tests and coverage |
 
 **Flow variations** (depending on task complexity):
 - **Full**: Spec → Research → Plan → Implement

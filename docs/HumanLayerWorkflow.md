@@ -49,6 +49,19 @@ The [`/hl_research_codebase`](../commands/hl_research_codebase.md) command uses 
 
 For small, well-defined tasks, the Research phase can be skipped. Start directly with Plan or even Implement if the change is trivial.
 
+## Output Artifacts
+
+Each phase produces a specific artifact:
+
+| Phase | Output | Purpose |
+|-------|--------|---------|
+| Research | `research.md` | Codebase mapping, patterns, integration points |
+| Plan | `plan.md` | Design document, phased tasks, success criteria |
+| Implement | Code + tests | Working implementation with verification |
+| Handoff | `handoff.md` | Session context for resumption |
+
+Artifacts are typically stored in a feature directory under `docs/plans/YYYY-MM-description/`.
+
 ## Why is This Important?
 
 A bad line of code is... a bad line of code. But a bad line of a plan could lead to hundreds of bad lines of code. And a bad line of research, a misunderstanding of how the codebase works or where certain functionality is located, could land you with thousands of bad lines of code.

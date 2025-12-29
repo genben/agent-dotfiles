@@ -10,6 +10,7 @@ A variation of the Research + Plan + Implement workflow that starts with a speci
 | **Research** | [`/mr_research_codebase`](../commands/mr_research_codebase.md) | Explore the codebase relevant to the spec, document patterns and components in `research.md` |
 | **Plan** | [`/mr_plan`](../commands/mr_plan.md) | Create `plan.md` (Software Design Document + phases) and `plan_phase_N.md` files |
 | **Implement** | [`/mr_implement_plan`](../commands/mr_implement_plan.md) | Implement the plan using TDD with `plan.md` as source of truth |
+| **Validate** | [`/mr_validate_implementation`](../commands/mr_validate_implementation.md) | Validate implementation against spec/plan; run tests and coverage; document deviations |
 
 ## Flow Variations
 
@@ -53,14 +54,6 @@ Use for simple, well-defined features or when working in a familiar codebase.
 1. Create a thorough specification document
 2. Implement directly from the spec (skipping explicit research and planning phases)
 
-## When to Use Each Flow
-
-| Flow | Use When |
-|------|----------|
-| **Full** | Complex features, unfamiliar codebase, multiple integration points, architectural decisions needed |
-| **Short** | Medium complexity, somewhat familiar codebase, clear integration approach |
-| **Straight** | Simple features, very familiar codebase, well-defined spec with obvious implementation path |
-
 ## Why Start with a Spec?
 
 The specification phase adds value by:
@@ -87,5 +80,6 @@ Each phase produces a specific artifact:
 | Research | `research.md` | Codebase mapping, patterns, integration points |
 | Plan | `plan.md` + `plan_phase_N.md` | Design document, phased tasks, test strategy |
 | Implement | Code + tests | Working implementation with verification |
+| Validate | Validation report | Acceptance criteria checklist, coverage, deviations |
 
 All artifacts are typically stored together in a feature directory under `docs/plans/`.
