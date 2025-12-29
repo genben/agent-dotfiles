@@ -21,6 +21,7 @@ Run the install script to symlink directories to `~/.claude/`:
 ```bash
 ./install-for-claude.sh           # Interactive mode
 ./install-for-claude.sh -n        # Non-interactive mode (for CI/automation)
+./uninstall-for-claude.sh         # Remove symlinks
 ```
 
-The script is idempotent and can be safely re-run.
+Both scripts are idempotent and can be safely re-run.
