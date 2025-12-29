@@ -10,6 +10,23 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLAUDE_HOME="${HOME}/.claude"
 INTERACTIVE=true
 
+# Colors (disabled if not a terminal)
+if [[ -t 1 ]]; then
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    YELLOW='\033[0;33m'
+    BLUE='\033[0;34m'
+    BOLD='\033[1m'
+    NC='\033[0m'
+else
+    RED=''
+    GREEN=''
+    YELLOW=''
+    BLUE=''
+    BOLD=''
+    NC=''
+fi
+
 # Parse arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -52,7 +69,7 @@ done
 
 DIRECTORIES=("commands" "agents" "skills")
 
-echo "Installing agent-dotfiles to ${CLAUDE_HOME}..."
+echo -e "${BOLD}Installing agent-dotfiles to ${CLAUDE_HOME}...${NC}"
 echo ""
 
 # Ensure ~/.claude exists
@@ -72,7 +89,7 @@ for dir in "${DIRECTORIES[@]}"; do
 
     # Check if source directory exists
     if [[ ! -d "$src" ]]; then
-        echo "  [SKIP] ${dir}: source directory does not exist"
+        echo -e "  ${YELLOW}[SKIP]${NC} ${dir}: source directory does not exist"
         skipped+=("$dir")
         continue
     fi
@@ -82,25 +99,25 @@ for dir in "${DIRECTORIES[@]}"; do
         # Check if it points to the correct location
         current_target="$(readlink "$dest")"
         if [[ "$current_target" == "$src" ]]; then
-            echo "  [OK] ${dir}: symlink already exists"
+            echo -e "  ${GREEN}[OK]${NC} ${dir}: symlink already exists"
             already_linked+=("$dir")
             continue
         else
-            echo "  [WARN] ${dir}: symlink exists but points to ${current_target}"
+            echo -e "  ${YELLOW}[WARN]${NC} ${dir}: symlink exists but points to ${current_target}"
             if [[ "$INTERACTIVE" == true ]]; then
                 read -p "  Replace symlink? [y/N] " -n 1 -r
                 echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
                     rm "$dest"
                     ln -s "$src" "$dest"
-                    echo "  [DONE] ${dir}: symlink updated"
+                    echo -e "  ${GREEN}[DONE]${NC} ${dir}: symlink updated"
                     installed+=("$dir")
                 else
-                    echo "  [SKIP] ${dir}: skipped by user"
+                    echo -e "  ${YELLOW}[SKIP]${NC} ${dir}: skipped by user"
                     skipped+=("$dir")
                 fi
             else
-                echo "  [ERROR] ${dir}: symlink conflict (non-interactive mode)"
+                echo -e "  ${RED}[ERROR]${NC} ${dir}: symlink conflict (non-interactive mode)"
                 errors+=("$dir")
             fi
             continue
@@ -109,20 +126,20 @@ for dir in "${DIRECTORIES[@]}"; do
 
     # Check if destination is a regular directory
     if [[ -d "$dest" ]]; then
-        echo "  [CONFLICT] ${dir}: directory already exists at ${dest}"
+        echo -e "  ${RED}[CONFLICT]${NC} ${dir}: directory already exists at ${dest}"
         if [[ "$INTERACTIVE" == true ]]; then
             read -p "  Skip this directory and continue? [y/N] " -n 1 -r
             echo
             if [[ $REPLY =~ ^[Yy]$ ]]; then
-                echo "  [SKIP] ${dir}: skipped by user"
+                echo -e "  ${YELLOW}[SKIP]${NC} ${dir}: skipped by user"
                 skipped+=("$dir")
             else
                 echo ""
-                echo "Aborted. Please remove or rename ${dest} and try again."
+                echo -e "${RED}Aborted.${NC} Please remove or rename ${dest} and try again."
                 exit 1
             fi
         else
-            echo "  [ERROR] ${dir}: cannot create symlink (non-interactive mode)"
+            echo -e "  ${RED}[ERROR]${NC} ${dir}: cannot create symlink (non-interactive mode)"
             errors+=("$dir")
         fi
         continue
@@ -130,20 +147,20 @@ for dir in "${DIRECTORIES[@]}"; do
 
     # Check if destination is a file
     if [[ -e "$dest" ]]; then
-        echo "  [CONFLICT] ${dir}: file exists at ${dest}"
+        echo -e "  ${RED}[CONFLICT]${NC} ${dir}: file exists at ${dest}"
         if [[ "$INTERACTIVE" == true ]]; then
             read -p "  Skip and continue? [y/N] " -n 1 -r
             echo
             if [[ $REPLY =~ ^[Yy]$ ]]; then
-                echo "  [SKIP] ${dir}: skipped by user"
+                echo -e "  ${YELLOW}[SKIP]${NC} ${dir}: skipped by user"
                 skipped+=("$dir")
             else
                 echo ""
-                echo "Aborted. Please remove ${dest} and try again."
+                echo -e "${RED}Aborted.${NC} Please remove ${dest} and try again."
                 exit 1
             fi
         else
-            echo "  [ERROR] ${dir}: cannot create symlink (non-interactive mode)"
+            echo -e "  ${RED}[ERROR]${NC} ${dir}: cannot create symlink (non-interactive mode)"
             errors+=("$dir")
         fi
         continue
@@ -151,7 +168,7 @@ for dir in "${DIRECTORIES[@]}"; do
 
     # Create symlink
     ln -s "$src" "$dest"
-    echo "  [DONE] ${dir}: symlink created"
+    echo -e "  ${GREEN}[DONE]${NC} ${dir}: symlink created"
     installed+=("$dir")
 done
 
@@ -159,22 +176,22 @@ echo ""
 
 # Exit with error if there were conflicts in non-interactive mode
 if [[ ${#errors[@]} -gt 0 ]]; then
-    echo "Failed to install: ${errors[*]}"
+    echo -e "${RED}Failed to install:${NC} ${errors[*]}"
     echo "Run in interactive mode or resolve conflicts manually."
     exit 1
 fi
 
 # Summary
 if [[ ${#installed[@]} -gt 0 ]]; then
-    echo "Installed: ${installed[*]}"
+    echo -e "${GREEN}Installed:${NC} ${installed[*]}"
 fi
 if [[ ${#already_linked[@]} -gt 0 ]]; then
-    echo "Already installed: ${already_linked[*]}"
+    echo -e "${BLUE}Already installed:${NC} ${already_linked[*]}"
 fi
 if [[ ${#skipped[@]} -gt 0 ]]; then
-    echo "Skipped: ${skipped[*]}"
+    echo -e "${YELLOW}Skipped:${NC} ${skipped[*]}"
 fi
 
 echo ""
-echo "Done! Your custom commands and skills are now available in Claude Code CLI."
+echo -e "${GREEN}Done!${NC} Your custom commands and skills are now available in Claude Code CLI."
 echo "Restart Claude Code or start a new session to use them."
