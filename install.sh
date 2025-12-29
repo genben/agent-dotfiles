@@ -105,7 +105,7 @@ case $AGENT in
         ;;
     codex)
         AGENT_HOME="${HOME}/.codex"
-        MAPPINGS=("commands:prompts" "agents" "skills" "templates" "scripts")
+        MAPPINGS=("commands:prompts" "skills" "templates" "scripts")
         AGENT_DISPLAY="Codex"
         ;;
 esac
