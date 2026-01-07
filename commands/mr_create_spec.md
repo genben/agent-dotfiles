@@ -12,14 +12,21 @@ Turn the user's brainstormed requirements into a clear, testable `spec.md` that 
 - Otherwise, ask the user to paste the initial requirements.
 
 ## Interaction protocol (Strict)
-1) Ask **one** clarifying question at a time.
+1) Before asking any clarifying questions:
+   - Thoroughly research the codebase to find answers first.
+   - Only ask questions that cannot be answered through research.
+   - Do not ask obvious questions.
+2) Ask **one** clarifying question at a time.
    - Prefer multiple choice answers when reasonable.
+   - Provide recommended options with rationale.
    - Maintain `Open Questions` + `Assumptions` as you go.
-2) When you believe requirements are sufficiently clear:
+3) Use `AskUserQuestionTool` tool if available, otherwise use chat
+4) When you believe requirements are sufficiently clear:
    - Propose the `spec.md` outline (from the template).
    - Then present the user the spec for approval in small blocks ~200-300 words per block.
    - After each block, ask: "Does this look right so far? (yes/no + corrections)"
-3) Only after user confirms the summaries, write/update `spec.md`.
+   - If user provides corrections, apply them and re-present only the modified portions.
+5) Only after user confirms the summaries, write/update `spec.md`.
 
 ## What the spec must include
 - Context & goals (user/business perspective)
