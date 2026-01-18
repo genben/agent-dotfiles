@@ -19,6 +19,9 @@ If the user has NOT provided requirements in the prompt arguments (`$ARGUMENTS`)
 If the user HAS provided requirements (in `$ARGUMENTS` or referenced files):
 1. Confirm you understand by summarizing the key goals
 2. Ask any clarifying questions if critical details are missing
+   - Prefer multiple choice answers when reasonable.
+   - Provide recommended options with rationale.
+   - Present questions in a numbered list for easy reference. Options should be lettered (a, b, c, etc.)
 
 ## Read the Specification
 
