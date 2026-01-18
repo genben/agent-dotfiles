@@ -72,3 +72,7 @@ If the template file is missing, notify the user and stop. Only proceed after th
 Stop once `spec.md` is written and the user confirms it looks correct.
 
 Prefer storing the spec.md document in project's `docs/plans/{branch}/spec.md` if such path exists, otherwise store in project root.
+
+---
+
+**User's input:** $ARGUMENTS

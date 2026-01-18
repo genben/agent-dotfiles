@@ -61,3 +61,7 @@ Create `handoff_<YYYY-MM-DD--HH-MM>.md` with timestamp in filename.
 - Do not omit anything that would cause rework
 - Include exact file paths, not vague references
 - Prefer bullet points over prose
+
+---
+
+**User's input:** $ARGUMENTS

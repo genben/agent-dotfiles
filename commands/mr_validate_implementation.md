@@ -56,3 +56,7 @@ Write validation report including:
 - Any required updates to plan.md or docs
 
 Keep chat concise and evidence-driven.
+
+---
+
+**User's input:** $ARGUMENTS

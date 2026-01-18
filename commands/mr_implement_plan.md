@@ -89,3 +89,7 @@ Maintain in `plan.md`:
 - Each update: 1-2 sentences, include concrete outcome.
 
 End by telling the user what to run to verify (tests/lint/coverage).
+
+---
+
+**User's input:** $ARGUMENTS

@@ -55,3 +55,7 @@ Check for and read project standards documents:
 - `docs/standards/code_quality.md` or `code_styleguide.md` - code standards
 
 Apply these standards when resuming implementation.
+
+---
+
+**User's input:** $ARGUMENTS

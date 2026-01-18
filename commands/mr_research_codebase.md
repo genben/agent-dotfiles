@@ -71,3 +71,7 @@ Write the research doc to `research.md` (next to `spec.md`), following the templ
 - evidence appendix (commands run + pointers)
 
 Keep chat updates brief; only announce major milestones.
+
+---
+
+**User's input:** $ARGUMENTS

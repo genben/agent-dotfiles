@@ -101,3 +101,7 @@ If a template file is missing, notify the user and stop. Only proceed after the 
 - In docs: structured headings, crisp bullets, signatures/pseudocode allowed, no full code.
 
 Stop once docs are written and the user approves the plan direction.
+
+---
+
+**User's input:** $ARGUMENTS
