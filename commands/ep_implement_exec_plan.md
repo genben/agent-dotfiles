@@ -66,12 +66,14 @@ Follow the plan's milestones in order. For each task:
 - **Commit after each milestone or major task** - do not batch multiple milestones into a single commit
 
 **Commit message guidelines:**
+- Use Conventional Commits style
 - Use imperative mood (e.g., "Add feature" not "Added feature")
 - Focus on WHY the changes were made, not just what changed
 - Keep commits focused and atomic
 - NEVER add Claude attribution, "Generated with Claude", or "Co-Authored-By" lines
 - Write commit messages as if the user wrote them
 - **Commit only code changes** - do not commit plan/spec documents unless they are already tracked in git
+- Do not commit files unrelated to the current task
 
 ### If Blocked or Uncertain
 - Do NOT prompt the user for "next steps" - resolve ambiguities autonomously
