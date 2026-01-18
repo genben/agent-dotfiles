@@ -39,7 +39,7 @@ Before writing the plan:
 
 ## Writing Guidelines
 
-**Prefer pseudo-code over exact code:** When designing new code, describe the desired behavior and key algorithms using pseudo-code rather than writing exact implementation code in the plan document. This keeps the plan focused on intent and logic while giving the implementer flexibility in the details. Save exact code snippets for critical interfaces, signatures, or small illustrative examples only.
+**Prefer pseudo-code over exact code:** When designing new code, describe the desired behavior and key algorithms using pseudo-code rather than writing exact implementation code in the plan document. Writing code snippets (keep the plan implementation-agnostic). This keeps the plan focused on intent and logic while giving the implementer flexibility in the details. Save exact code snippets for critical interfaces, signatures, or small illustrative examples only.
 
 **Reference source documents:** If the user provided specification files, requirements docs, or other source materials, include a "Source Documents" section near the top of the plan listing these files with full paths. Mark them as **required reading** for the implementer. Example:
 
