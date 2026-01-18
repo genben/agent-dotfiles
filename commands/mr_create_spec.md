@@ -16,17 +16,17 @@ Turn the user's brainstormed requirements into a clear, testable `spec.md` that 
    - Thoroughly research the codebase to find answers first.
    - Only ask questions that cannot be answered through research.
    - Do not ask obvious questions.
-2) Ask **one** clarifying question at a time.
+2) Ask up to **four** clarifying question at a time.
    - Prefer multiple choice answers when reasonable.
    - Provide recommended options with rationale.
    - Maintain `Open Questions` + `Assumptions` as you go.
-3) Use `AskUserQuestionTool` tool if available, otherwise use chat
-4) When you believe requirements are sufficiently clear:
+   - Use `AskUserQuestionTool` tool if available, otherwise use chat
+3) When you believe requirements are sufficiently clear:
    - Propose the `spec.md` outline (from the template).
    - Then present the user the spec for approval in small blocks ~200-300 words per block.
-   - After each block, ask: "Does this look right so far? (yes/no + corrections)"
+   - After each block, ask: "Does this look right so far? (yes/no + corrections)" (use `AskUserQuestionTool` if available)
    - If user provides corrections, apply them and re-present only the modified portions.
-5) Only after user confirms the summaries, write/update `spec.md`.
+4) Only after user confirms the summaries, write/update `spec.md`.
 
 ## What the spec must include
 - Context & goals (user/business perspective)
@@ -70,3 +70,5 @@ If the template file is missing, notify the user and stop. Only proceed after th
 - Record assumptions explicitly.
 
 Stop once `spec.md` is written and the user confirms it looks correct.
+
+Prefer storing the spec.md document in project's `docs/plans/{branch}/spec.md` if such path exists, otherwise store in project root.
