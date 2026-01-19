@@ -20,7 +20,9 @@
 ## Git
 - When committing, stage/commit ONLY files you intentionally changed for the current task; do not include unrelated modified files without explicit user approval.
 - Never run potentially destructive Git commands (e.g. `git restore`, `git reset`, `git checkout --`, `git clean`) without explicit user approval.
-- Use Conventional Commits spec to write git messages
+- Use Conventional Commits spec for commit messages.
+- Include the WHY in commit messages, not just WHAT changed. For issues fixed, include root cause analysis.
+- Split large changes into multiple focused commits rather than one big commit.
 
 ## Commands
 - Do not prefix every command with `cd REPO_DIR &&` if you are in the current dir.
