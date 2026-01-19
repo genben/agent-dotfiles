@@ -90,11 +90,13 @@ case $AGENT in
     claude)
         AGENT_HOME="${HOME}/.claude"
         MAPPINGS=("commands" "agents" "skills" "templates" "scripts")
+        FILE_MAPPINGS=("claude/CLAUDE.md:CLAUDE.md")
         AGENT_DISPLAY="Claude Code"
         ;;
     codex)
         AGENT_HOME="${HOME}/.codex"
         MAPPINGS=("commands:prompts" "skills" "templates" "scripts")
+        FILE_MAPPINGS=("codex/AGENTS.md:AGENTS.md")
         AGENT_DISPLAY="Codex"
         ;;
 esac
@@ -147,6 +149,47 @@ for entry in "${MAPPINGS[@]}"; do
         removed+=("$entry")
     else
         echo -e "  ${RED}[ERROR]${NC} ${dest_dir}: failed to remove symlink"
+        errors+=("$entry")
+    fi
+done
+
+# Process file mappings
+for entry in "${FILE_MAPPINGS[@]}"; do
+    # Parse source:dest format
+    src_file="${entry%%:*}"
+    dest_file="${entry#*:}"
+
+    src="${SCRIPT_DIR}/${src_file}"
+    dest="${AGENT_HOME}/${dest_file}"
+
+    # Check if destination exists
+    if [[ ! -e "$dest" && ! -L "$dest" ]]; then
+        echo -e "  ${BLUE}[SKIP]${NC} ${dest_file}: does not exist"
+        skipped_not_exist+=("$entry")
+        continue
+    fi
+
+    # Check if destination is a symlink
+    if [[ ! -L "$dest" ]]; then
+        echo -e "  ${YELLOW}[SKIP]${NC} ${dest_file}: not a symlink (regular file)"
+        skipped_not_symlink+=("$entry")
+        continue
+    fi
+
+    # Check if symlink points to our file
+    current_target="$(readlink "$dest")"
+    if [[ "$current_target" != "$src" ]]; then
+        echo -e "  ${YELLOW}[SKIP]${NC} ${dest_file}: symlink points to ${current_target}"
+        skipped_different_target+=("$entry")
+        continue
+    fi
+
+    # Remove symlink
+    if rm "$dest" 2>/dev/null; then
+        echo -e "  ${GREEN}[DONE]${NC} ${dest_file}: symlink removed"
+        removed+=("$entry")
+    else
+        echo -e "  ${RED}[ERROR]${NC} ${dest_file}: failed to remove symlink"
         errors+=("$entry")
     fi
 done

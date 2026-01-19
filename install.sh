@@ -101,11 +101,13 @@ case $AGENT in
     claude)
         AGENT_HOME="${HOME}/.claude"
         MAPPINGS=("commands" "agents" "skills" "templates" "scripts")
+        FILE_MAPPINGS=("claude/CLAUDE.md:CLAUDE.md")
         AGENT_DISPLAY="Claude Code"
         ;;
     codex)
         AGENT_HOME="${HOME}/.codex"
         MAPPINGS=("commands:prompts" "skills" "templates" "scripts")
+        FILE_MAPPINGS=("codex/AGENTS.md:AGENTS.md")
         AGENT_DISPLAY="Codex"
         ;;
 esac
@@ -218,6 +220,104 @@ for entry in "${MAPPINGS[@]}"; do
     # Create symlink
     ln -s "$src" "$dest"
     echo -e "  ${GREEN}[DONE]${NC} ${dest_dir}: symlink created"
+    installed+=("$entry")
+done
+
+# Process file mappings
+for entry in "${FILE_MAPPINGS[@]}"; do
+    # Parse source:dest format
+    src_file="${entry%%:*}"
+    dest_file="${entry#*:}"
+
+    src="${SCRIPT_DIR}/${src_file}"
+    dest="${AGENT_HOME}/${dest_file}"
+
+    # Check if source file exists
+    if [[ ! -f "$src" ]]; then
+        echo -e "  ${YELLOW}[SKIP]${NC} ${dest_file}: source file does not exist"
+        skipped+=("$entry")
+        continue
+    fi
+
+    # Check if destination is already a symlink
+    if [[ -L "$dest" ]]; then
+        current_target="$(readlink "$dest")"
+        if [[ "$current_target" == "$src" ]]; then
+            echo -e "  ${BLUE}[OK]${NC} ${dest_file}: symlink already exists"
+            already_linked+=("$entry")
+            continue
+        else
+            echo -e "  ${YELLOW}[WARN]${NC} ${dest_file}: symlink exists but points to ${current_target}"
+            if [[ "$INTERACTIVE" == true ]]; then
+                read -p "  Replace symlink? [y/N] " -n 1 -r
+                echo
+                if [[ $REPLY =~ ^[Yy]$ ]]; then
+                    rm "$dest"
+                    ln -s "$src" "$dest"
+                    echo -e "  ${GREEN}[DONE]${NC} ${dest_file}: symlink updated"
+                    installed+=("$entry")
+                else
+                    echo -e "  ${YELLOW}[SKIP]${NC} ${dest_file}: skipped by user"
+                    skipped+=("$entry")
+                fi
+            else
+                echo -e "  ${RED}[ERROR]${NC} ${dest_file}: symlink conflict (non-interactive mode)"
+                errors+=("$entry")
+            fi
+            continue
+        fi
+    fi
+
+    # Check if destination is a regular file
+    if [[ -f "$dest" ]]; then
+        echo -e "  ${YELLOW}[CONFLICT]${NC} ${dest_file}: file already exists at ${dest}"
+        if [[ "$INTERACTIVE" == true ]]; then
+            read -p "  Replace file? (existing file will be backed up) [y/N] " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                backup_suffix=".backup_$(date +%Y_%m_%d).md"
+                backup_file="${dest%.md}${backup_suffix}"
+                mv "$dest" "$backup_file"
+                backup_display="$(to_display_path "$backup_file")"
+                echo -e "  ${BLUE}[BACKUP]${NC} ${dest_file}: backed up to ${backup_display}"
+                ln -s "$src" "$dest"
+                echo -e "  ${GREEN}[DONE]${NC} ${dest_file}: symlink created"
+                installed+=("$entry")
+            else
+                echo -e "  ${YELLOW}[SKIP]${NC} ${dest_file}: skipped by user"
+                skipped+=("$entry")
+            fi
+        else
+            echo -e "  ${RED}[ERROR]${NC} ${dest_file}: file conflict (non-interactive mode)"
+            errors+=("$entry")
+        fi
+        continue
+    fi
+
+    # Check if destination is a directory
+    if [[ -d "$dest" ]]; then
+        echo -e "  ${RED}[CONFLICT]${NC} ${dest_file}: directory exists at ${dest}"
+        if [[ "$INTERACTIVE" == true ]]; then
+            read -p "  Skip and continue? [y/N] " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                echo -e "  ${YELLOW}[SKIP]${NC} ${dest_file}: skipped by user"
+                skipped+=("$entry")
+            else
+                echo ""
+                echo -e "${RED}Aborted.${NC} Please remove ${dest} and try again."
+                exit 1
+            fi
+        else
+            echo -e "  ${RED}[ERROR]${NC} ${dest_file}: cannot create symlink (non-interactive mode)"
+            errors+=("$entry")
+        fi
+        continue
+    fi
+
+    # Create symlink
+    ln -s "$src" "$dest"
+    echo -e "  ${GREEN}[DONE]${NC} ${dest_file}: symlink created"
     installed+=("$entry")
 done
 
