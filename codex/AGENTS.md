@@ -26,6 +26,8 @@
 
 ## Commands
 - Do not prefix every command with `cd REPO_DIR &&` if you are in the current dir.
+- Prefer `python3` over `python` unless the project uses `python` explicitly.
+- Prefer `uv` wrapper for commands when available (e.g., `uv run pytest` instead of `pytest`).
 
 
 ## Template Reply
