@@ -9,7 +9,7 @@
 - After editing source code files, always run relevant tests (pytest, ctest, etc.) before declaring the task complete.
 
 ## Playwright Notes
-- If Playwright-specific tests fail, it's most likely due to sandbox permission restrictions. Ask the user to escalate permissions and rerun.
+- If Playwright-specific tests fail, it's most likely due to sandbox permission restrictions. Ask the user to escalate permissions and rerun. Do not try to install it yourself.
 
 ## Code Style
 - Default to `line-length = 120` for code unless instructed otherwise.
