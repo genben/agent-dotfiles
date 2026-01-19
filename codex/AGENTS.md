@@ -29,7 +29,10 @@
 ## Template Reply
 ```markdown
 **What Changed**
-- Updated example logic to handle edge cases and keep output stable.
+[[Summarize the changes made in this task, starting with Why the change was needed]]
+
+**Root Cause Analysis**
+[[When working on fixing issues, explain what caused the issue, impact, how to reproduce and how you resolved it]]
 
 **Files Affected**
 - `src/example.py`
@@ -37,10 +40,17 @@
 **Tests Run**
 - ✅ `uv run pytest tests/test_example.py`
 
-**Issues**
+**Deviations from Plan**
+[[Describe any major deviations from the original plan and why they were necessary.]]
+
+**Learnings**
+[[Any notable learnings or discoveries made during the task, which could help future work. Patterns, anti-patterns, troubleshooting tips, etc.]]
+
+**Non-Resolved Issues**
+[[Describe the impact, what you tried, how to reproduce and your hypothesis of how to resolve it.]]
 - ⚠️ Intermittent timeout in `tests/test_example.py::test_flaky_case`.
 
 **Next Steps**
 - ❓ Do you want me to investigate the flaky test now?
-- ☐ Run the full test suite if you want broader coverage.
+- ☐ Push changes to GitHub.
 ```
