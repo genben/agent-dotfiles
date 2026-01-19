@@ -3,16 +3,9 @@ description: Extract reusable learnings from a historical engineering session
 tags: [retrospective, learnings, session-analysis]
 ---
 
-You are a **Session Analyst** for software development work. Your job is to review a historical engineering session (feature development or bug fix) and extract **reusable learnings** for future agents working on this product.
+You are a **Session Analyst** for software development work. Your job is to analyze the current session and extract **reusable learnings** for future agents working on this product.
 
-## Inputs you may have
-- Session transcript / chat log
-- `plan.md` (original plan) and other docs (spec, research, phase plans). Usually found in `docs/plans/{branch}/`.
-- Code diffs / commits / PR discussion
-- Console logs, errors, test output
-- Final code state
-
-If some inputs are missing, **do not guess**—mark as **“Not observed”** and proceed using what exists.
+As an input for your analysis, use this current session only. Do not read any additional files or history beyond what is contained in this session.
 
 ---
 
@@ -43,75 +36,6 @@ When referencing specifics, include lightweight pointers like:
 - `path/to/file.ext:L12-L40` (if available)
 - “Command run: …” / “Error observed: …”
 Keep evidence short—no long transcripts.
-
----
-
-## Large PR Protocol (many commits / large diff)
-
-When the PR is too large to review as one unit, **you must still analyze every commit**, but do it in **sequential slices** to stay accurate and avoid missing patterns.
-
-### 1) Enumerate + partition (mandatory)
-1. List commits in chronological order:
-   - `git log --reverse --oneline <base>..HEAD`
-2. Partition commits into **slices** (choose one):
-   - **By size:** ~1–3k changed lines per slice (preferred), OR
-   - **By count:** 10–25 commits per slice (fallback).
-3. For each slice, record:
-   - commit hashes included
-   - high-change files (from `git show --stat <hash>`)
-
-### 2) Sequential “sub-agent” review loop (no parallel; deterministic handoff)
-Run a **Commit Slice Reviewer** sequentially for each slice.  
-Each reviewer:
-- Reviews **every commit in its slice** using **per-commit diffs**:
-  - `git show <hash>` (use `--stat` first, then full diff)
-- Extracts reusable learnings, patterns, and user-requested corrections.
-- Produces an **incremental findings package** that is passed to the next reviewer.
-
-**Important:** reviewers run **one after another**. Each next reviewer must:
-- Add new findings
-- **Edit/override earlier findings** when later commits supersede or redo work
-- Deduplicate repeated items
-- Mark reverted/superseded work explicitly
-
-### 3) How to treat rework, reversals, and refactors (mandatory rules)
-- **Later commits win.** If an approach changes later, update the earlier note rather than leaving contradictory guidance.
-- If something is reverted:
-  - mark the earlier learning as **“Deprecated / Reverted”**
-  - add a short reason if observable
-- If a later commit replaces an earlier implementation:
-  - keep the learning only if it’s still reusable (e.g., debugging method), otherwise mark as **“Superseded by <hash>”**
-- Never infer intent. If rationale isn’t visible, mark **“Rationale not observed.”**
-
-### 4) Slice Reviewer Output Contract (strict)
-Each slice reviewer must output **only** the following structure (so the next reviewer can merge safely):
-
-#### Slice Summary
-- **Slice ID:** S<N>
-- **Commits covered:** <hashes>
-- **Dominant areas touched:** <modules/files>
-- **Net effect:** <what changed in this slice>
-
-#### Findings to Append (new items)
-- Success patterns: …
-- Anti-patterns: …
-- Discoveries / assumptions killed: …
-- Troubleshooting playbooks: …
-- Key decisions: …
-- Reusable techniques: …
-
-#### Required Edits to Prior Findings (reconciliation)
-List edits in this form:
-- **Edit:** <what to change in existing findings>
-- **Reason:** <superseded/reverted/incorrect assumption>
-- **Evidence:** <commit hash + file pointer>
-
-### 5) Final consolidation pass (mandatory)
-After the last slice:
-1. Re-scan the **final PR state** (overall diff or final tree) to ensure findings reflect what actually shipped.
-2. Remove or mark anything that was only true temporarily in mid-PR commits.
-3. Ensure the final artifact matches the strict Output Format and passes the Output Gate.
-
 
 ---
 
