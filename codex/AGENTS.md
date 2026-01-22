@@ -7,6 +7,7 @@
 
 ## Testing Expectations
 - After editing source code files, always run relevant tests (pytest, ctest, etc.) before declaring the task complete.
+- Use “Repro-first” workflow when user reports a bug: Write a unit test that expresses the *expected* behavior (assert success) but currently fails. Then diagnose and fix the bug.
 
 ## Playwright Notes
 - If Playwright-specific tests fail, it's most likely due to sandbox permission restrictions. Ask the user to escalate permissions and rerun. Do not try to install it yourself.
