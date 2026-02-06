@@ -48,6 +48,7 @@ You are tasked with generating a comprehensive pull request description followin
    - Document any verification steps you couldn't complete
 
 7. **Generate the description:**
+   - Replace the template title with the branch name (e.g., `# 2026-02-001-public-reports-role-permission`)
    - Fill out each section from the template thoroughly:
      - Answer each question/section based on your analysis
      - Be specific about problems solved and changes made
