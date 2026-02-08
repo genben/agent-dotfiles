@@ -1,10 +1,3 @@
-## Response Formatting
-- Prefer a human-friendly summary: short headings + bullets.
-- When reporting actions, include: What changed, Files affected, Tests run, Next steps.
-- Keep language plain and avoid raw command logs unless asked.
-- Use the "Template Reply" section below as the response format reference.
-- Omit any section entirely if it has no items.
-
 ## Testing Expectations
 - After editing source code files, always run relevant tests (pytest, ctest, etc.) before declaring the task complete.
 - Use “Repro-first” workflow when user reports a bug: Write a unit test that expresses the *expected* behavior (assert success) but currently fails. Then diagnose and fix the bug.
@@ -30,8 +23,14 @@
 - Prefer `python3` over `python` unless the project uses `python` explicitly.
 - Prefer `uv` wrapper for commands when available (e.g., `uv run pytest` instead of `pytest`).
 
+## Response Formatting
+- Prefer a human-friendly summary: short headings + bullets.
+- When reporting actions, include: What changed, Files affected, Tests run, Next steps.
+- Keep language plain and avoid raw command logs unless asked.
+- Use the "Template Reply" section below as the response format reference.
+- Omit any section entirely if it has no items.
 
-## Template Reply
+### Template Reply
 ```markdown
 **What Changed**
 [[Summarize the changes made in this task, starting with Why the change was needed]]
