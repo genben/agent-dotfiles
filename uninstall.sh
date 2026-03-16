@@ -41,9 +41,10 @@ usage() {
     echo ""
     echo "Usage: $0 <agent> [OPTIONS]"
     echo ""
-    echo "Agents:"
+    echo "Targets:"
     echo "  claude    Uninstall from Claude Code CLI (~/.claude/)"
     echo "  codex     Uninstall from Codex CLI (~/.codex/)"
+    echo "  shared    Uninstall shared resources (~/.agents/)"
     echo ""
     echo "Options:"
     echo "  -h, --help  Show this help message"
@@ -51,6 +52,7 @@ usage() {
     echo "Examples:"
     echo "  $0 claude   Uninstall from Claude Code"
     echo "  $0 codex    Uninstall from Codex"
+    echo "  $0 shared   Uninstall shared resources only"
     echo ""
     echo "Only symlinks pointing to this repository are removed."
     echo "Symlinks pointing elsewhere are left unchanged."
@@ -59,7 +61,7 @@ usage() {
 # Parse arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
-        claude|codex)
+        claude|codex|shared)
             AGENT="$1"
             shift
             ;;
@@ -84,18 +86,24 @@ if [[ -z "$AGENT" ]]; then
     exit 1
 fi
 
-# Set agent-specific configuration
+# Configuration
 # Format: "source_dir:dest_dir" (dest_dir optional, defaults to source_dir)
 case $AGENT in
+    shared)
+        AGENT_HOME="${HOME}/.agents"
+        MAPPINGS=("skills" "templates" "scripts")
+        FILE_MAPPINGS=()
+        AGENT_DISPLAY="shared resources"
+        ;;
     claude)
         AGENT_HOME="${HOME}/.claude"
-        MAPPINGS=("commands" "agents" "skills" "templates" "scripts")
+        MAPPINGS=("commands" "agents")
         FILE_MAPPINGS=("claude/CLAUDE.md:CLAUDE.md")
         AGENT_DISPLAY="Claude Code"
         ;;
     codex)
         AGENT_HOME="${HOME}/.codex"
-        MAPPINGS=("commands:prompts" "skills" "templates" "scripts")
+        MAPPINGS=("commands:prompts")
         FILE_MAPPINGS=("codex/AGENTS.md:AGENTS.md")
         AGENT_DISPLAY="Codex"
         ;;
@@ -103,95 +111,67 @@ esac
 
 AGENT_HOME_DISPLAY="$(to_display_path "$AGENT_HOME")"
 
-echo -e "${BOLD}Uninstalling agent-dotfiles for ${AGENT_DISPLAY} from ${AGENT_HOME_DISPLAY}...${NC}"
-echo ""
-
 removed=()
 skipped_not_symlink=()
 skipped_different_target=()
 skipped_not_exist=()
 errors=()
 
+# Remove a symlink if it points to our repo: unlink_symlink <src> <dest> <label>
+unlink_symlink() {
+    local src="$1" dest="$2" label="$3"
+    local dest_display="$(to_display_path "$dest")"
+
+    if [[ ! -e "$dest" && ! -L "$dest" ]]; then
+        echo -e "  ${BLUE}[SKIP]${NC} ${label}: does not exist"
+        skipped_not_exist+=("$dest_display")
+        return
+    fi
+
+    if [[ ! -L "$dest" ]]; then
+        echo -e "  ${YELLOW}[SKIP]${NC} ${label}: not a symlink (regular directory/file)"
+        skipped_not_symlink+=("$dest_display")
+        return
+    fi
+
+    current_target="$(readlink "$dest")"
+    if [[ "$current_target" != "$src" ]]; then
+        echo -e "  ${YELLOW}[SKIP]${NC} ${label}: symlink points to ${current_target}"
+        skipped_different_target+=("$dest_display")
+        return
+    fi
+
+    if rm "$dest" 2>/dev/null; then
+        echo -e "  ${GREEN}[DONE]${NC} ${label}: symlink removed"
+        removed+=("$dest_display")
+    else
+        echo -e "  ${RED}[ERROR]${NC} ${label}: failed to remove symlink"
+        errors+=("$dest_display")
+    fi
+}
+
+echo -e "${BOLD}Uninstalling agent-dotfiles for ${AGENT_DISPLAY} from ${AGENT_HOME_DISPLAY}...${NC}"
+echo ""
+
+# Remove directory symlinks
 for entry in "${MAPPINGS[@]}"; do
-    # Parse source:dest format
     src_dir="${entry%%:*}"
     dest_dir="${entry#*:}"
     [[ "$dest_dir" == "$entry" ]] && dest_dir="$src_dir"
 
     src="${SCRIPT_DIR}/${src_dir}"
     dest="${AGENT_HOME}/${dest_dir}"
-
-    # Check if destination exists
-    if [[ ! -e "$dest" && ! -L "$dest" ]]; then
-        echo -e "  ${BLUE}[SKIP]${NC} ${dest_dir}: does not exist"
-        skipped_not_exist+=("$entry")
-        continue
-    fi
-
-    # Check if destination is a symlink
-    if [[ ! -L "$dest" ]]; then
-        echo -e "  ${YELLOW}[SKIP]${NC} ${dest_dir}: not a symlink (regular directory/file)"
-        skipped_not_symlink+=("$entry")
-        continue
-    fi
-
-    # Check if symlink points to our directory
-    current_target="$(readlink "$dest")"
-    if [[ "$current_target" != "$src" ]]; then
-        echo -e "  ${YELLOW}[SKIP]${NC} ${dest_dir}: symlink points to ${current_target}"
-        skipped_different_target+=("$entry")
-        continue
-    fi
-
-    # Remove symlink
-    if rm "$dest" 2>/dev/null; then
-        echo -e "  ${GREEN}[DONE]${NC} ${dest_dir}: symlink removed"
-        removed+=("$entry")
-    else
-        echo -e "  ${RED}[ERROR]${NC} ${dest_dir}: failed to remove symlink"
-        errors+=("$entry")
-    fi
+    unlink_symlink "$src" "$dest" "${dest_dir}"
 done
 
-# Process file mappings
+# Remove agent-specific file symlinks
 for entry in "${FILE_MAPPINGS[@]}"; do
-    # Parse source:dest format
     src_file="${entry%%:*}"
     dest_file="${entry#*:}"
 
     src="${SCRIPT_DIR}/${src_file}"
     dest="${AGENT_HOME}/${dest_file}"
-
-    # Check if destination exists
-    if [[ ! -e "$dest" && ! -L "$dest" ]]; then
-        echo -e "  ${BLUE}[SKIP]${NC} ${dest_file}: does not exist"
-        skipped_not_exist+=("$entry")
-        continue
-    fi
-
-    # Check if destination is a symlink
-    if [[ ! -L "$dest" ]]; then
-        echo -e "  ${YELLOW}[SKIP]${NC} ${dest_file}: not a symlink (regular file)"
-        skipped_not_symlink+=("$entry")
-        continue
-    fi
-
-    # Check if symlink points to our file
-    current_target="$(readlink "$dest")"
-    if [[ "$current_target" != "$src" ]]; then
-        echo -e "  ${YELLOW}[SKIP]${NC} ${dest_file}: symlink points to ${current_target}"
-        skipped_different_target+=("$entry")
-        continue
-    fi
-
-    # Remove symlink
-    if rm "$dest" 2>/dev/null; then
-        echo -e "  ${GREEN}[DONE]${NC} ${dest_file}: symlink removed"
-        removed+=("$entry")
-    else
-        echo -e "  ${RED}[ERROR]${NC} ${dest_file}: failed to remove symlink"
-        errors+=("$entry")
-    fi
+    unlink_symlink "$src" "$dest" "${dest_file}"
 done
 
 echo ""
@@ -202,10 +182,8 @@ echo ""
 if [[ ${#removed[@]} -gt 0 ]]; then
     echo -e "${GREEN}Successfully removed:${NC}"
     echo ""
-    for entry in "${removed[@]}"; do
-        dest_dir="${entry#*:}"
-        [[ "$dest_dir" == "$entry" ]] && dest_dir="${entry%%:*}"
-        echo -e "  ${GREEN}${AGENT_HOME_DISPLAY}/${dest_dir}${NC}"
+    for item in "${removed[@]}"; do
+        echo -e "  ${GREEN}${item}${NC}"
     done
 fi
 
@@ -217,15 +195,11 @@ if [[ ${#skipped_not_symlink[@]} -gt 0 || ${#skipped_different_target[@]} -gt 0 
     echo ""
     echo -e "${YELLOW}Skipped (not managed by this repo):${NC}"
     echo ""
-    for entry in "${skipped_not_symlink[@]}"; do
-        dest_dir="${entry#*:}"
-        [[ "$dest_dir" == "$entry" ]] && dest_dir="${entry%%:*}"
-        echo -e "  ${YELLOW}${AGENT_HOME_DISPLAY}/${dest_dir}${NC} (not a symlink)"
+    for item in "${skipped_not_symlink[@]}"; do
+        echo -e "  ${YELLOW}${item}${NC} (not a symlink)"
     done
-    for entry in "${skipped_different_target[@]}"; do
-        dest_dir="${entry#*:}"
-        [[ "$dest_dir" == "$entry" ]] && dest_dir="${entry%%:*}"
-        echo -e "  ${YELLOW}${AGENT_HOME_DISPLAY}/${dest_dir}${NC} (points elsewhere)"
+    for item in "${skipped_different_target[@]}"; do
+        echo -e "  ${YELLOW}${item}${NC} (points elsewhere)"
     done
 fi
 
@@ -237,10 +211,8 @@ if [[ ${#errors[@]} -gt 0 ]]; then
     echo ""
     echo -e "${RED}Failed to remove:${NC}"
     echo ""
-    for entry in "${errors[@]}"; do
-        dest_dir="${entry#*:}"
-        [[ "$dest_dir" == "$entry" ]] && dest_dir="${entry%%:*}"
-        echo -e "  ${RED}${AGENT_HOME_DISPLAY}/${dest_dir}${NC}"
+    for item in "${errors[@]}"; do
+        echo -e "  ${RED}${item}${NC}"
     done
     exit 1
 fi

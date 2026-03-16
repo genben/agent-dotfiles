@@ -46,6 +46,9 @@ usage() {
     echo "  claude    Install for Claude Code CLI (~/.claude/)"
     echo "  codex     Install for Codex CLI (~/.codex/)"
     echo ""
+    echo "Shared resources (skills, templates, scripts) are installed to ~/.agents/"
+    echo "regardless of which agent is selected."
+    echo ""
     echo "Options:"
     echo "  -n, --non-interactive  Run without prompts. Exits with error on conflicts"
     echo "                         instead of asking the user. Useful for CI/automation."
@@ -95,182 +98,169 @@ if [[ -z "$AGENT" ]]; then
     exit 1
 fi
 
-# Set agent-specific configuration
+# Shared configuration (installed for all agents)
+SHARED_HOME="${HOME}/.agents"
+SHARED_MAPPINGS=("skills" "templates" "scripts")
+
+# Agent-specific configuration
 # Format: "source_dir:dest_dir" (dest_dir optional, defaults to source_dir)
 case $AGENT in
     claude)
         AGENT_HOME="${HOME}/.claude"
-        MAPPINGS=("commands" "agents" "skills" "templates" "scripts")
+        MAPPINGS=("commands" "agents")
         FILE_MAPPINGS=("claude/CLAUDE.md:CLAUDE.md")
         AGENT_DISPLAY="Claude Code"
         ;;
     codex)
         AGENT_HOME="${HOME}/.codex"
-        MAPPINGS=("commands:prompts" "skills" "templates" "scripts")
+        MAPPINGS=("commands:prompts")
         FILE_MAPPINGS=("codex/AGENTS.md:AGENTS.md")
         AGENT_DISPLAY="Codex"
         ;;
 esac
 
 AGENT_HOME_DISPLAY="$(to_display_path "$AGENT_HOME")"
+SHARED_HOME_DISPLAY="$(to_display_path "$SHARED_HOME")"
 SCRIPT_DIR_DISPLAY="$(to_display_path "$SCRIPT_DIR")"
-
-echo -e "${BOLD}Installing agent-dotfiles for ${AGENT_DISPLAY} to ${AGENT_HOME_DISPLAY}...${NC}"
-echo ""
-
-# Ensure agent home exists
-if [[ ! -d "$AGENT_HOME" ]]; then
-    echo "Creating ${AGENT_HOME_DISPLAY}..."
-    mkdir -p "$AGENT_HOME"
-fi
 
 skipped=()
 installed=()
 already_linked=()
 errors=()
 
-for entry in "${MAPPINGS[@]}"; do
-    # Parse source:dest format
-    src_dir="${entry%%:*}"
-    dest_dir="${entry#*:}"
-    [[ "$dest_dir" == "$entry" ]] && dest_dir="$src_dir"
-
-    src="${SCRIPT_DIR}/${src_dir}"
-    dest="${AGENT_HOME}/${dest_dir}"
+# Install a directory symlink: install_dir_link <src> <dest> <display_label>
+install_dir_link() {
+    local src="$1" dest="$2" label="$3"
+    local display="$(to_display_path "$dest") => $(to_display_path "$src")"
 
     # Check if source directory exists
     if [[ ! -d "$src" ]]; then
-        echo -e "  ${YELLOW}[SKIP]${NC} ${dest_dir}: source directory does not exist"
-        skipped+=("$entry")
-        continue
+        echo -e "  ${YELLOW}[SKIP]${NC} ${label}: source directory does not exist"
+        skipped+=("$display")
+        return
     fi
 
     # Check if destination is already a symlink
     if [[ -L "$dest" ]]; then
-        # Check if it points to the correct location
         current_target="$(readlink "$dest")"
         if [[ "$current_target" == "$src" ]]; then
-            echo -e "  ${BLUE}[OK]${NC} ${dest_dir}: symlink already exists"
-            already_linked+=("$entry")
-            continue
+            echo -e "  ${BLUE}[OK]${NC} ${label}: symlink already exists"
+            already_linked+=("$display")
+            return
         else
-            echo -e "  ${YELLOW}[WARN]${NC} ${dest_dir}: symlink exists but points to ${current_target}"
+            echo -e "  ${YELLOW}[WARN]${NC} ${label}: symlink exists but points to ${current_target}"
             if [[ "$INTERACTIVE" == true ]]; then
                 read -p "  Replace symlink? [y/N] " -n 1 -r
                 echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
                     rm "$dest"
                     ln -s "$src" "$dest"
-                    echo -e "  ${GREEN}[DONE]${NC} ${dest_dir}: symlink updated"
-                    installed+=("$entry")
+                    echo -e "  ${GREEN}[DONE]${NC} ${label}: symlink updated"
+                    installed+=("$display")
                 else
-                    echo -e "  ${YELLOW}[SKIP]${NC} ${dest_dir}: skipped by user"
-                    skipped+=("$entry")
+                    echo -e "  ${YELLOW}[SKIP]${NC} ${label}: skipped by user"
+                    skipped+=("$display")
                 fi
             else
-                echo -e "  ${RED}[ERROR]${NC} ${dest_dir}: symlink conflict (non-interactive mode)"
-                errors+=("$entry")
+                echo -e "  ${RED}[ERROR]${NC} ${label}: symlink conflict (non-interactive mode)"
+                errors+=("$label")
             fi
-            continue
+            return
         fi
     fi
 
     # Check if destination is a regular directory
     if [[ -d "$dest" ]]; then
-        echo -e "  ${RED}[CONFLICT]${NC} ${dest_dir}: directory already exists at ${dest}"
+        echo -e "  ${RED}[CONFLICT]${NC} ${label}: directory already exists at ${dest}"
         if [[ "$INTERACTIVE" == true ]]; then
             read -p "  Skip this directory and continue? [y/N] " -n 1 -r
             echo
             if [[ $REPLY =~ ^[Yy]$ ]]; then
-                echo -e "  ${YELLOW}[SKIP]${NC} ${dest_dir}: skipped by user"
-                skipped+=("$entry")
+                echo -e "  ${YELLOW}[SKIP]${NC} ${label}: skipped by user"
+                skipped+=("$display")
             else
                 echo ""
                 echo -e "${RED}Aborted.${NC} Please remove or rename ${dest} and try again."
                 exit 1
             fi
         else
-            echo -e "  ${RED}[ERROR]${NC} ${dest_dir}: cannot create symlink (non-interactive mode)"
-            errors+=("$entry")
+            echo -e "  ${RED}[ERROR]${NC} ${label}: cannot create symlink (non-interactive mode)"
+            errors+=("$label")
         fi
-        continue
+        return
     fi
 
     # Check if destination is a file
     if [[ -e "$dest" ]]; then
-        echo -e "  ${RED}[CONFLICT]${NC} ${dest_dir}: file exists at ${dest}"
+        echo -e "  ${RED}[CONFLICT]${NC} ${label}: file exists at ${dest}"
         if [[ "$INTERACTIVE" == true ]]; then
             read -p "  Skip and continue? [y/N] " -n 1 -r
             echo
             if [[ $REPLY =~ ^[Yy]$ ]]; then
-                echo -e "  ${YELLOW}[SKIP]${NC} ${dest_dir}: skipped by user"
-                skipped+=("$entry")
+                echo -e "  ${YELLOW}[SKIP]${NC} ${label}: skipped by user"
+                skipped+=("$display")
             else
                 echo ""
                 echo -e "${RED}Aborted.${NC} Please remove ${dest} and try again."
                 exit 1
             fi
         else
-            echo -e "  ${RED}[ERROR]${NC} ${dest_dir}: cannot create symlink (non-interactive mode)"
-            errors+=("$entry")
+            echo -e "  ${RED}[ERROR]${NC} ${label}: cannot create symlink (non-interactive mode)"
+            errors+=("$label")
         fi
-        continue
+        return
     fi
 
     # Create symlink
     ln -s "$src" "$dest"
-    echo -e "  ${GREEN}[DONE]${NC} ${dest_dir}: symlink created"
-    installed+=("$entry")
-done
+    echo -e "  ${GREEN}[DONE]${NC} ${label}: symlink created"
+    installed+=("$display")
+}
 
-# Process file mappings
-for entry in "${FILE_MAPPINGS[@]}"; do
-    # Parse source:dest format
-    src_file="${entry%%:*}"
-    dest_file="${entry#*:}"
-
-    src="${SCRIPT_DIR}/${src_file}"
-    dest="${AGENT_HOME}/${dest_file}"
+# Install a file symlink: install_file_link <src> <dest> <display_label>
+install_file_link() {
+    local src="$1" dest="$2" label="$3"
+    local display="$(to_display_path "$dest") => $(to_display_path "$src")"
 
     # Check if source file exists
     if [[ ! -f "$src" ]]; then
-        echo -e "  ${YELLOW}[SKIP]${NC} ${dest_file}: source file does not exist"
-        skipped+=("$entry")
-        continue
+        echo -e "  ${YELLOW}[SKIP]${NC} ${label}: source file does not exist"
+        skipped+=("$display")
+        return
     fi
 
     # Check if destination is already a symlink
     if [[ -L "$dest" ]]; then
         current_target="$(readlink "$dest")"
         if [[ "$current_target" == "$src" ]]; then
-            echo -e "  ${BLUE}[OK]${NC} ${dest_file}: symlink already exists"
-            already_linked+=("$entry")
-            continue
+            echo -e "  ${BLUE}[OK]${NC} ${label}: symlink already exists"
+            already_linked+=("$display")
+            return
         else
-            echo -e "  ${YELLOW}[WARN]${NC} ${dest_file}: symlink exists but points to ${current_target}"
+            echo -e "  ${YELLOW}[WARN]${NC} ${label}: symlink exists but points to ${current_target}"
             if [[ "$INTERACTIVE" == true ]]; then
                 read -p "  Replace symlink? [y/N] " -n 1 -r
                 echo
                 if [[ $REPLY =~ ^[Yy]$ ]]; then
                     rm "$dest"
                     ln -s "$src" "$dest"
-                    echo -e "  ${GREEN}[DONE]${NC} ${dest_file}: symlink updated"
-                    installed+=("$entry")
+                    echo -e "  ${GREEN}[DONE]${NC} ${label}: symlink updated"
+                    installed+=("$display")
                 else
-                    echo -e "  ${YELLOW}[SKIP]${NC} ${dest_file}: skipped by user"
-                    skipped+=("$entry")
+                    echo -e "  ${YELLOW}[SKIP]${NC} ${label}: skipped by user"
+                    skipped+=("$display")
                 fi
             else
-                echo -e "  ${RED}[ERROR]${NC} ${dest_file}: symlink conflict (non-interactive mode)"
-                errors+=("$entry")
+                echo -e "  ${RED}[ERROR]${NC} ${label}: symlink conflict (non-interactive mode)"
+                errors+=("$label")
             fi
-            continue
+            return
         fi
     fi
 
     # Check if destination is a regular file
     if [[ -f "$dest" ]]; then
-        echo -e "  ${YELLOW}[CONFLICT]${NC} ${dest_file}: file already exists at ${dest}"
+        echo -e "  ${YELLOW}[CONFLICT]${NC} ${label}: file already exists at ${dest}"
         if [[ "$INTERACTIVE" == true ]]; then
             read -p "  Replace file? (existing file will be backed up) [y/N] " -n 1 -r
             echo
@@ -279,46 +269,89 @@ for entry in "${FILE_MAPPINGS[@]}"; do
                 backup_file="${dest%.md}${backup_suffix}"
                 mv "$dest" "$backup_file"
                 backup_display="$(to_display_path "$backup_file")"
-                echo -e "  ${BLUE}[BACKUP]${NC} ${dest_file}: backed up to ${backup_display}"
+                echo -e "  ${BLUE}[BACKUP]${NC} ${label}: backed up to ${backup_display}"
                 ln -s "$src" "$dest"
-                echo -e "  ${GREEN}[DONE]${NC} ${dest_file}: symlink created"
-                installed+=("$entry")
+                echo -e "  ${GREEN}[DONE]${NC} ${label}: symlink created"
+                installed+=("$display")
             else
-                echo -e "  ${YELLOW}[SKIP]${NC} ${dest_file}: skipped by user"
-                skipped+=("$entry")
+                echo -e "  ${YELLOW}[SKIP]${NC} ${label}: skipped by user"
+                skipped+=("$display")
             fi
         else
-            echo -e "  ${RED}[ERROR]${NC} ${dest_file}: file conflict (non-interactive mode)"
-            errors+=("$entry")
+            echo -e "  ${RED}[ERROR]${NC} ${label}: file conflict (non-interactive mode)"
+            errors+=("$label")
         fi
-        continue
+        return
     fi
 
     # Check if destination is a directory
     if [[ -d "$dest" ]]; then
-        echo -e "  ${RED}[CONFLICT]${NC} ${dest_file}: directory exists at ${dest}"
+        echo -e "  ${RED}[CONFLICT]${NC} ${label}: directory exists at ${dest}"
         if [[ "$INTERACTIVE" == true ]]; then
             read -p "  Skip and continue? [y/N] " -n 1 -r
             echo
             if [[ $REPLY =~ ^[Yy]$ ]]; then
-                echo -e "  ${YELLOW}[SKIP]${NC} ${dest_file}: skipped by user"
-                skipped+=("$entry")
+                echo -e "  ${YELLOW}[SKIP]${NC} ${label}: skipped by user"
+                skipped+=("$display")
             else
                 echo ""
                 echo -e "${RED}Aborted.${NC} Please remove ${dest} and try again."
                 exit 1
             fi
         else
-            echo -e "  ${RED}[ERROR]${NC} ${dest_file}: cannot create symlink (non-interactive mode)"
-            errors+=("$entry")
+            echo -e "  ${RED}[ERROR]${NC} ${label}: cannot create symlink (non-interactive mode)"
+            errors+=("$label")
         fi
-        continue
+        return
     fi
 
     # Create symlink
     ln -s "$src" "$dest"
-    echo -e "  ${GREEN}[DONE]${NC} ${dest_file}: symlink created"
-    installed+=("$entry")
+    echo -e "  ${GREEN}[DONE]${NC} ${label}: symlink created"
+    installed+=("$display")
+}
+
+echo -e "${BOLD}Installing agent-dotfiles for ${AGENT_DISPLAY}...${NC}"
+echo ""
+
+# Ensure directories exist
+for dir in "$SHARED_HOME" "$AGENT_HOME"; do
+    if [[ ! -d "$dir" ]]; then
+        dir_display="$(to_display_path "$dir")"
+        echo "Creating ${dir_display}..."
+        mkdir -p "$dir"
+    fi
+done
+
+# Install shared symlinks (skills, templates, scripts) to ~/.agents/
+echo -e "${BOLD}Shared resources (${SHARED_HOME_DISPLAY}):${NC}"
+for entry in "${SHARED_MAPPINGS[@]}"; do
+    src="${SCRIPT_DIR}/${entry}"
+    dest="${SHARED_HOME}/${entry}"
+    install_dir_link "$src" "$dest" "${entry}"
+done
+echo ""
+
+# Install agent-specific directory symlinks
+echo -e "${BOLD}${AGENT_DISPLAY}-specific (${AGENT_HOME_DISPLAY}):${NC}"
+for entry in "${MAPPINGS[@]}"; do
+    src_dir="${entry%%:*}"
+    dest_dir="${entry#*:}"
+    [[ "$dest_dir" == "$entry" ]] && dest_dir="$src_dir"
+
+    src="${SCRIPT_DIR}/${src_dir}"
+    dest="${AGENT_HOME}/${dest_dir}"
+    install_dir_link "$src" "$dest" "${dest_dir}"
+done
+
+# Install agent-specific file symlinks
+for entry in "${FILE_MAPPINGS[@]}"; do
+    src_file="${entry%%:*}"
+    dest_file="${entry#*:}"
+
+    src="${SCRIPT_DIR}/${src_file}"
+    dest="${AGENT_HOME}/${dest_file}"
+    install_file_link "$src" "$dest" "${dest_file}"
 done
 
 echo ""
@@ -336,11 +369,8 @@ fi
 if [[ ${#installed[@]} -gt 0 ]]; then
     echo -e "${GREEN}Successfully installed (symlinks):${NC}"
     echo ""
-    for entry in "${installed[@]}"; do
-        src_dir="${entry%%:*}"
-        dest_dir="${entry#*:}"
-        [[ "$dest_dir" == "$entry" ]] && dest_dir="$src_dir"
-        echo -e "  ${GREEN}${AGENT_HOME_DISPLAY}/${dest_dir}${NC} => ${SCRIPT_DIR_DISPLAY}/${src_dir}"
+    for item in "${installed[@]}"; do
+        echo -e "  ${GREEN}${item}${NC}"
     done
     echo ""
     echo "Restart ${AGENT_DISPLAY} or start a new session to use them."
@@ -354,11 +384,8 @@ if [[ ${#already_linked[@]} -gt 0 ]]; then
     fi
     echo -e "${BLUE}Already installed (no changes):${NC}"
     echo ""
-    for entry in "${already_linked[@]}"; do
-        src_dir="${entry%%:*}"
-        dest_dir="${entry#*:}"
-        [[ "$dest_dir" == "$entry" ]] && dest_dir="$src_dir"
-        echo -e "  ${BLUE}${AGENT_HOME_DISPLAY}/${dest_dir}${NC} => ${SCRIPT_DIR_DISPLAY}/${src_dir}"
+    for item in "${already_linked[@]}"; do
+        echo -e "  ${BLUE}${item}${NC}"
     done
 fi
 
@@ -368,11 +395,9 @@ if [[ ${#skipped[@]} -gt 0 ]]; then
         echo "────────────────────────────────────────"
     fi
     echo ""
-    echo -e "${RED}NOT INSTALLED (skipped due to directories already exist):${NC}"
+    echo -e "${RED}NOT INSTALLED (skipped):${NC}"
     echo ""
-    for entry in "${skipped[@]}"; do
-        dest_dir="${entry#*:}"
-        [[ "$dest_dir" == "$entry" ]] && dest_dir="${entry%%:*}"
-        echo -e "  ${RED}${AGENT_HOME_DISPLAY}/${dest_dir}${NC}"
+    for item in "${skipped[@]}"; do
+        echo -e "  ${RED}${item}${NC}"
     done
 fi
