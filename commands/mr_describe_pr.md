@@ -63,7 +63,12 @@ You are tasked with generating a comprehensive pull request description followin
    - Use the descriptive name as SHORT_DESCRIPTION (infer from the branch name, PR title and the content of the PR)
    - Show the user the generated description and name.
 
-9. **Update the PR:**
+9. **Commit and push the description file:**
+   - Stage the description file: `git add docs/prs/pr_{NNN}_{SHORT_DESCRIPTON}.md`
+   - Commit with message: `docs: add PR description for #{number}`
+   - Push to the remote branch
+
+10. **Update the PR:**
    - Update the PR description directly: `gh pr edit {number} --body-file docs/prs/pr_{NNN}_{SHORT_DESCRIPTON}.md`
    - If any verification steps remain unchecked, remind the user to complete them before merging
    - Confirm the update was successful
