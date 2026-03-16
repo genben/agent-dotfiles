@@ -55,7 +55,7 @@ Before the spec is considered complete:
 
 ## Template (required)
 Use this template as the starting structure for the spec:
-- `~/.claude/templates/spec_template.md`
+- `~/.agents/templates/spec_template.md`
 
 If the template file is missing, notify the user and stop. Only proceed after the user provides the template inline or creates the template file.
 

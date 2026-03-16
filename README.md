@@ -31,21 +31,29 @@ The install script creates symlinks from this repository to the agent's config d
 ## Uninstallation
 
 ```bash
-./uninstall.sh claude
-./uninstall.sh codex
+./uninstall.sh claude    # Remove Claude Code symlinks
+./uninstall.sh codex     # Remove Codex symlinks
+./uninstall.sh shared    # Remove shared resource symlinks
 ```
 
 Only symlinks pointing to this repository are removed. Existing directories are left unchanged.
 
 ## Directory Structure
 
+**Shared resources** (installed to `~/.agents/` for all agents):
+
+| Directory | Description | Destination |
+|-----------|-------------|-------------|
+| `skills/` | Skill definitions | `~/.agents/skills/` |
+| `templates/` | Reusable templates | `~/.agents/templates/` |
+| `scripts/` | Helper scripts | `~/.agents/scripts/` |
+
+**Agent-specific:**
+
 | Directory | Description | Claude Code | Codex |
 |-----------|-------------|-------------|-------|
 | `commands/` | Custom slash commands | `~/.claude/commands/` | `~/.codex/prompts/` |
 | `agents/` | Sub-agent definitions | `~/.claude/agents/` | Not supported |
-| `skills/` | Skill definitions | `~/.claude/skills/` | `~/.codex/skills/` |
-| `templates/` | Reusable templates | `~/.claude/templates/` | `~/.codex/templates/` |
-| `scripts/` | Helper scripts | `~/.claude/scripts/` | `~/.codex/scripts/` |
 
 ## Usage
 
