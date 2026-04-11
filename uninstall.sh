@@ -92,19 +92,19 @@ fi
 case $AGENT in
     shared)
         AGENT_HOME="${HOME}/.agents"
-        MAPPINGS=("skills" "templates" "scripts")
+        MAPPINGS=("skills")
         FILE_MAPPINGS=()
         AGENT_DISPLAY="shared resources"
         ;;
     claude)
         AGENT_HOME="${HOME}/.claude"
-        MAPPINGS=("commands" "agents")
+        MAPPINGS=()
         FILE_MAPPINGS=("claude/CLAUDE.md:CLAUDE.md")
         AGENT_DISPLAY="Claude Code"
         ;;
     codex)
         AGENT_HOME="${HOME}/.codex"
-        MAPPINGS=("commands:prompts")
+        MAPPINGS=()
         FILE_MAPPINGS=("codex/AGENTS.md:AGENTS.md")
         AGENT_DISPLAY="Codex"
         ;;

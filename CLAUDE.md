@@ -1,15 +1,12 @@
-This repository contains AI coding agent configurations (commands, skills, templates) that can be symlinked to `~/.claude/`, `~/.codex/`, `~/.agents/` and `~/.pi/` for use with various coding agents (Claude Code, Codex, PI).
+This repository contains AI coding agent configurations (skills, config files) that can be symlinked to `~/.claude/`, `~/.codex/`, `~/.agents/` and `~/.pi/` for use with various coding agents (Claude Code, Codex, PI).
 
 ## Repository Structure
 
 - `skills/` - Skills, installed into `~/.agents/skills`. This location is recognized by all coding agents.
-- `templates/` - Reusable templates (installed into `~/.agents/templates`, these templates files are referenced from skills/commands)
-- `scripts/` - Helper scripts (installed into `~/.agents/scripts`)
 - `claude/` - Claude Code config files (e.g. `CLAUDE.md`, installed into `~/.claude/`)
 - `codex/` - Codex config files (e.g. `AGENTS.md`, installed into `~/.codex/`)
 - `pi/` - PI extensions and themes (installed into `~/.pi/agent/`)
-- `commands/` - Custom slash commands (mapped to `prompts/` for Codex). DEPRECATED, use skills instead.
-- `agents/` - Sub-agents (installed for Claude Code only). DEPRACATED. I don't use them.
+- `_archive/` - Archived commands, agents, scripts, and templates (not installed). Can be migrated to skills as needed.
 
 ## Installation
 

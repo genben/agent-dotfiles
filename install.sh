@@ -47,8 +47,7 @@ usage() {
     echo "  codex     Install for Codex CLI (~/.codex/)"
     echo "  pi        Install for PI (~/.pi/)"
     echo ""
-    echo "Shared resources (skills, templates, scripts) are installed to ~/.agents/"
-    echo "regardless of which agent is selected."
+    echo "Skills are installed to ~/.agents/skills/ regardless of which agent is selected."
     echo ""
     echo "Options:"
     echo "  -n, --non-interactive  Run without prompts. Exits with error on conflicts"
@@ -101,20 +100,20 @@ fi
 
 # Shared configuration (installed for all agents)
 SHARED_HOME="${HOME}/.agents"
-SHARED_MAPPINGS=("skills" "templates" "scripts")
+SHARED_MAPPINGS=("skills")
 
 # Agent-specific configuration
 # Format: "source_dir:dest_dir" (dest_dir optional, defaults to source_dir)
 case $AGENT in
     claude)
         AGENT_HOME="${HOME}/.claude"
-        MAPPINGS=("commands" "agents")
+        MAPPINGS=()
         FILE_MAPPINGS=("claude/CLAUDE.md:CLAUDE.md")
         AGENT_DISPLAY="Claude Code"
         ;;
     codex)
         AGENT_HOME="${HOME}/.codex"
-        MAPPINGS=("commands:prompts")
+        MAPPINGS=()
         FILE_MAPPINGS=("codex/AGENTS.md:AGENTS.md")
         AGENT_DISPLAY="Codex"
         ;;
@@ -330,7 +329,7 @@ for dir in "$SHARED_HOME" "$AGENT_HOME"; do
     fi
 done
 
-# Install shared symlinks (skills, templates, scripts) to ~/.agents/
+# Install shared symlinks (skills) to ~/.agents/
 echo -e "${BOLD}Shared resources (${SHARED_HOME_DISPLAY}):${NC}"
 for entry in "${SHARED_MAPPINGS[@]}"; do
     src="${SCRIPT_DIR}/${entry}"
