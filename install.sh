@@ -45,6 +45,7 @@ usage() {
     echo "Agents:"
     echo "  claude    Install for Claude Code CLI (~/.claude/)"
     echo "  codex     Install for Codex CLI (~/.codex/)"
+    echo "  pi        Install for PI (~/.pi/)"
     echo ""
     echo "Shared resources (skills, templates, scripts) are installed to ~/.agents/"
     echo "regardless of which agent is selected."
@@ -69,7 +70,7 @@ usage() {
 # Parse arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
-        claude|codex)
+        claude|codex|pi)
             AGENT="$1"
             shift
             ;;
@@ -116,6 +117,12 @@ case $AGENT in
         MAPPINGS=("commands:prompts")
         FILE_MAPPINGS=("codex/AGENTS.md:AGENTS.md")
         AGENT_DISPLAY="Codex"
+        ;;
+    pi)
+        AGENT_HOME="${HOME}/.pi/agent"
+        MAPPINGS=("pi/extensions:extensions" "pi/themes:themes")
+        FILE_MAPPINGS=()
+        AGENT_DISPLAY="PI"
         ;;
 esac
 

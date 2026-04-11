@@ -44,6 +44,7 @@ usage() {
     echo "Targets:"
     echo "  claude    Uninstall from Claude Code CLI (~/.claude/)"
     echo "  codex     Uninstall from Codex CLI (~/.codex/)"
+    echo "  pi        Uninstall from PI (~/.pi/)"
     echo "  shared    Uninstall shared resources (~/.agents/)"
     echo ""
     echo "Options:"
@@ -61,7 +62,7 @@ usage() {
 # Parse arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
-        claude|codex|shared)
+        claude|codex|pi|shared)
             AGENT="$1"
             shift
             ;;
@@ -106,6 +107,12 @@ case $AGENT in
         MAPPINGS=("commands:prompts")
         FILE_MAPPINGS=("codex/AGENTS.md:AGENTS.md")
         AGENT_DISPLAY="Codex"
+        ;;
+    pi)
+        AGENT_HOME="${HOME}/.pi/agent"
+        MAPPINGS=("pi/extensions:extensions" "pi/themes:themes")
+        FILE_MAPPINGS=()
+        AGENT_DISPLAY="PI"
         ;;
 esac
 
