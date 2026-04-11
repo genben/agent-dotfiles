@@ -15,7 +15,17 @@
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { Type } from "@sinclair/typebox";
-import * as Diff from "diff";
+let Diff: typeof import("diff");
+try {
+	Diff = require("diff");
+} catch {
+	const extDir = __dirname;
+	throw new Error(
+		`Missing required dependency "diff".\n\n` +
+		`To fix, run:\n` +
+		`  cd ${extDir} && npm install\n`
+	);
+}
 import { constants } from "fs";
 import { access as fsAccess, readFile as fsReadFile, unlink as fsUnlink, writeFile as fsWriteFile } from "fs/promises";
 import { isAbsolute, resolve as resolvePath } from "path";

@@ -1,0 +1,10 @@
+{
+  "name": "multi-edit",
+  "private": true,
+  "dependencies": {
+    "diff": "^8.0.0"
+  },
+  "pi": {
+    "extensions": ["./index.ts"]
+  }
+}
