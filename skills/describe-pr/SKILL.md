@@ -1,6 +1,6 @@
 ---
-name: mr-describe-pr
-description: Generate comprehensive PR descriptions following repository templates. Use when asked to describe, document, or write a PR description.
+name: describe-pr
+description: Generate comprehensive PR description. Use when asked to describe, document, or write a PR description.
 ---
 
 # Generate PR Description

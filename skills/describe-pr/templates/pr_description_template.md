@@ -1,4 +1,4 @@
-# ull Request Description Template
+# Pull Request Description Template
 
 ## 🔍 Summary
 
