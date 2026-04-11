@@ -10,10 +10,9 @@ You are tasked with generating a comprehensive pull request description followin
 ## Steps to follow:
 
 1. **Read the PR description template:**
-   - First, check if PR description template file exists (either at `docs/templates/pr_description_template.md` or `~/.agents/templates/pr_description_template.md`). Use Read() command to check these files, not Search.
-   - If it doesn't exist, inform the user that they need to create a PR description in either of those locations
+   - Location (in the skill dir): `templates/pr_description_template.md`
    - Read the template carefully to understand all sections and requirements
-
+   - Use Read() command to check these files, not Search.
 
 2. **Identify the PR to describe:**
    - Check if the current branch has an associated PR: `gh pr view --json url,number,title,state 2>/dev/null`
@@ -21,7 +20,7 @@ You are tasked with generating a comprehensive pull request description followin
    - Ask the user which PR they want to describe
 
 3. **Check for existing description:**
-   - Check if `docs/prs/{number}_description.md` already exists
+   - Check if `docs/prs/{number}_description.md` already exists (in the current project dir)
    - If it exists, read it and inform the user you'll be updating it
    - Consider what has changed since the last description was written
 
@@ -42,14 +41,14 @@ You are tasked with generating a comprehensive pull request description followin
 6. **Handle verification requirements:**
    - Look for any checklist items in the "How to verify it" section of the template
    - For each verification step:
-     - If it's a command you can run (like `make check test`, `npm test`, etc.), run it
+     - If it's a command you can run (like `make check test`, `npm test`, `pytest`, etc.), run it
      - If it passes, mark the checkbox as checked: `- [x]`
      - If it fails, keep it unchecked and note what failed: `- [ ]` with explanation
      - If it requires manual testing (UI interactions, external services), leave unchecked and note for user
    - Document any verification steps you couldn't complete
 
 7. **Generate the description:**
-   - Replace the template title with the branch name (e.g., `# 2026-02-001-public-reports-role-permission`)
+   - Replace the template title with the branch name (e.g., `# 2026-02-01-public-reports-role-permission`)
    - Fill out each section from the template thoroughly:
      - Answer each question/section based on your analysis
      - Be specific about problems solved and changes made
