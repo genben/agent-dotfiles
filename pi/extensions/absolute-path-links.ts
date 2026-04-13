@@ -19,6 +19,8 @@
  * this extension monkey-patches AssistantMessageComponent.updateContent() at
  * load time. Before the message is rendered, it rewrites matching text blocks
  * to inject OSC 8 links for paths that actually exist on disk.
+ * 
+ * Author: Gennadiy Bezkorovayniy (with Codex)
  */
 import fs from "node:fs";
 import path from "node:path";
