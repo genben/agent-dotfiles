@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create Exec Plan"
+  short_description: "Draft self-contained executable plans"
+  default_prompt: "Use $create-exec-plan to turn these requirements into a reviewed plan.md."

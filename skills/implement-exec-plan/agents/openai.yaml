@@ -1,0 +1,4 @@
+interface:
+  display_name: "Implement Exec Plan"
+  short_description: "Execute and maintain living plan.md files"
+  default_prompt: "Use $implement-exec-plan to implement this plan.md and keep it updated."
