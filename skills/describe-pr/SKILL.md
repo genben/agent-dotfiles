@@ -27,16 +27,24 @@ You are tasked with generating a comprehensive pull request description followin
 4. **Gather comprehensive PR information:**
    - Get the full PR diff: `gh pr diff {number}`
    - If you get an error about no default remote repository, instruct the user to run `gh repo set-default` and select the appropriate repository
-   - Get commit history: `gh pr view {number} --json commits`
    - Review the base branch: `gh pr view {number} --json baseRefName`
    - Get PR metadata: `gh pr view {number} --json url,title,number,state`
+   - **Read full commit messages with bodies, not just headlines.** `git log --oneline` and `gh pr view --json commits` (which returns only `messageHeadline`) are NOT sufficient — they hide the "why", the surprises, the specific regressions, and the behavior-change rationale that the author wrote in the commit body. Use:
+     ```bash
+     git log {base-branch}..HEAD --no-merges --pretty=format:"=====%n%h %s%n%b" > /tmp/all_commits.txt
+     wc -l /tmp/all_commits.txt
+     ```
+     Then Read the file (in chunks if large). Treat every non-trivial commit body as a primary source: it usually contains the root cause, the user-visible behavior change, and any guardrails the author put in. The PR description should reflect those specifics, not paraphrase the headlines.
+   - For PRs with many commits (>20), do not skim only the most recent ones — the earliest commits typically contain the design rationale, and middle commits often contain behavior changes that ride along.
 
 5. **Analyze the changes thoroughly:** (ultrathink about the code changes, their architectural implications, and potential impacts)
    - Read through the entire diff carefully
+   - Cross-reference the diff with the commit bodies from step 4: each fix/feat commit body usually names the root cause, the user-visible symptom, and any subtle behavior change. These belong in the PR description.
    - For context, read any files that are referenced but not shown in the diff
+   - Read any planning docs the PR adds under `docs/plans/` — they typically capture the design rationale, surprises, and decision log
    - Understand the purpose and impact of each change
    - Identify user-facing changes vs internal implementation details
-   - Look for breaking changes or migration requirements
+   - Look for breaking changes or migration requirements — behavior changes are often buried in `fix(...)` commit bodies, not just `feat(...)` headlines
 
 6. **Handle verification requirements:**
    - Look for any checklist items in the "How to verify it" section of the template
