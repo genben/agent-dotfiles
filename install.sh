@@ -107,7 +107,7 @@ SHARED_MAPPINGS=("skills")
 case $AGENT in
     claude)
         AGENT_HOME="${HOME}/.claude"
-        MAPPINGS=()
+        MAPPINGS=("skills:skills")
         FILE_MAPPINGS=("claude/CLAUDE.md:CLAUDE.md")
         AGENT_DISPLAY="Claude Code"
         ;;
