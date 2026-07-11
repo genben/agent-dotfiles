@@ -42,6 +42,8 @@ requested source when they conflict.
    - Use pseudocode for algorithms and behavior.
    - Include exact code only for critical interfaces, signatures, tiny examples, or commands where precision matters.
    - Include a `Source Documents (Required Reading)` section near the top when the user supplied spec files or docs.
+   - Do not include machine-specific absolute paths in the plan. Use repository-relative paths, generic instructions like
+     "from the repository root", or explicit environment variables/placeholders when an absolute path is unavoidable.
 
 6. Save the approved plan.
    - After all chunks are approved, assemble the full plan as `plan.md`.
@@ -61,4 +63,6 @@ requested source when they conflict.
 - Include milestones, concrete steps, validation, acceptance, idempotence, recovery, artifacts, and dependencies.
 - Initialize `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` sections.
 - State exact commands from the correct working directory and describe expected results.
+- Use repository-relative paths in commands and file references; avoid local absolute paths such as home-directory,
+  worktree, or temporary-directory paths.
 - Make the plan safe to resume from only the `plan.md` file and current working tree.
