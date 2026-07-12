@@ -1,68 +1,57 @@
 ---
 name: create-exec-plan
-description: "Create self-contained executable plan.md documents from requirements, tickets, specs, or feature requests. Use when asked to create, draft, design, or review an exec plan, execution plan, plan.md, or implementation plan before coding."
+description: "Create a self-contained executable plan.md for complex, multi-milestone work. Use when the user explicitly asks to create, draft, or review an exec plan, execution plan, or plan.md, or when the work is complex enough to justify milestone-based planning with sub-agent orchestration. Not for simple one-off implementation tasks, even when the user says 'plan' or 'implement'."
 ---
 
 # Create Executable Plan
 
-Create an Executable Plan (`plan.md`) that a novice coding agent can follow to deliver a working, observable
-change from the user's requirements.
+Create an Executable Plan (`plan.md`) that documents the desired outcome, milestones, and acceptance criteria well enough that a fresh agent can implement the work from the plan and working tree alone.
+
+## When to Use — and When Not To
+
+Use this skill only for complex work: multiple milestones, several subsystems touched, significant unknowns, or an explicit user request for an exec plan.
+
+Do not use it for simple one-off tasks, even if the user says "plan" or "implement" — a task one agent can finish in a single sitting does not need an ExecPlan. If invoked for such a task, say the work is too small to justify an exec plan and offer to just do it.
 
 ## Required Reference
 
-Read `references/ExecPlanSpec.md` from this skill directory in full before writing the plan. Follow its skeleton and
-requirements exactly. If the repository also has a plan specification, read both and prefer the user's explicitly
-requested source when they conflict.
+Read `references/ExecPlanSpec.md` from this skill directory in full before writing the plan. It defines what belongs in a plan (outcomes, acceptance criteria, decisions) and what does not (pre-written code, step-by-step edit sequences). If the repository also has its own plan specification, read both and prefer the user's explicitly requested source when they conflict.
 
 ## Workflow
 
 1. Read directly mentioned files first.
-   - If the user mentions tickets, docs, specs, JSON, or related files, read each file in full before proceeding.
-   - Extract requirements, constraints, acceptance criteria, and source-document context before drafting anything.
+   - If the user mentions tickets, docs, specs, or related files, read each in full before proceeding.
+   - Extract requirements, constraints, acceptance criteria, and context before drafting anything.
 
-2. Gather enough requirements.
-   - If the user has not provided requirements, ask what they want to do and probe for purpose, expected behavior,
-     acceptance criteria, constraints, and any required source documents.
-   - If requirements are present, summarize the key goals and ask only critical clarifying questions. Prefer numbered
-     questions with lettered options when that makes the tradeoffs clearer.
+2. Clarify requirements upfront, in one batch.
+   - If requirements are missing or ambiguous at the level of *what to build* (purpose, expected behavior, scope boundaries, constraints), ask all clarifying questions now, in a single round. Prefer numbered questions with lettered options when that makes tradeoffs clearer.
+   - Do not ask about implementation details the implementer can decide later.
+   - If the requirements are already clear, skip the questions.
 
 3. Research the repository.
-   - Explore relevant files, modules, tests, and existing patterns before writing the plan.
-   - Identify affected ownership boundaries, conventions, dependencies, and validation commands.
-   - Keep notes focused on information the future implementer needs to succeed without prior context.
+   - Identify affected modules, ownership boundaries, existing patterns worth referencing, applicable standards docs, and validation commands.
+   - When several distinct areas are involved, fan out parallel research sub-agents (Explore agents) and consolidate their findings; research only what the plan needs to reference, not everything.
 
-4. Draft the plan incrementally.
-   - Use the `ExecPlanSpec.md` skeleton and keep the plan self-contained, novice-guiding, and outcome-focused.
-   - Present the plan to the user in 200-300 word chunks for approval.
-   - After each chunk, ask exactly: `Does this look right so far? (yes/no + corrections)`
-   - Stop completely after asking. Do not draft the next section until the user explicitly approves.
-   - If the user requests corrections, apply them, show only the changed portion, and ask again.
+4. Write the complete plan in one pass.
+   - Follow the ExecPlanSpec skeleton. No incremental chunk-by-chunk approval — produce the full document so the user can review it in one read.
+   - Describe outcomes and acceptance criteria, not code. Reference existing files as patterns instead of pasting snippets.
+   - Split the work into milestones that are each independently implementable and verifiable, with validation commands per milestone.
+   - Put anything only the user can decide into `Open Questions`; everything else, decide in the plan and record the rationale.
 
-5. Prefer intent over exact implementation code.
-   - Use pseudocode for algorithms and behavior.
-   - Include exact code only for critical interfaces, signatures, tiny examples, or commands where precision matters.
-   - Include a `Source Documents (Required Reading)` section near the top when the user supplied spec files or docs.
-   - Do not include machine-specific absolute paths in the plan. Use repository-relative paths, generic instructions like
-     "from the repository root", or explicit environment variables/placeholders when an absolute path is unavoidable.
+5. Save the plan.
+   - If the repository has a `docs/plans/` directory, save to `docs/plans/<branch-name>/plan.md` (create the subdirectory). Otherwise save `plan.md` at the repository root.
+   - Use repository-relative paths throughout the plan; never machine-specific absolute paths.
 
-6. Save the approved plan.
-   - After all chunks are approved, assemble the full plan as `plan.md`.
-   - Save it beside the primary referenced source file when there is one; otherwise save it at the repository root.
-   - If several source files from different directories are equally primary, choose the repository root and note why.
-
-7. Stop after plan creation.
-   - Tell the user where the plan was saved and summarize the key milestones.
+6. Stop after plan creation.
+   - Report where the plan was saved, summarize the milestones, and list any Open Questions that need answers.
    - Do not implement the plan.
-   - End with this instruction adapted to the actual path: `The plan has been saved to [path]. Please review the
-     complete document. When you're ready to implement, use $implement-exec-plan.`
+   - End with: `The plan has been saved to [path]. Please review the complete document. When you're ready to implement, use the implement-exec-plan skill.`
 
 ## Plan Quality Checklist
 
-- Explain the user's purpose and observable behavior first.
-- Define repository context with exact paths and plain-language terms.
-- Include milestones, concrete steps, validation, acceptance, idempotence, recovery, artifacts, and dependencies.
-- Initialize `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` sections.
-- State exact commands from the correct working directory and describe expected results.
-- Use repository-relative paths in commands and file references; avoid local absolute paths such as home-directory,
-  worktree, or temporary-directory paths.
-- Make the plan safe to resume from only the `plan.md` file and current working tree.
+- Purpose and user stories come first; acceptance criteria are observable behavior, not internal attributes.
+- Every milestone is independently testable with its own validation commands; testing is never deferred to the last milestone.
+- Non-Goals are stated; Open Questions is empty or explicitly awaiting the user.
+- No pre-written code or edit-by-edit instructions; existing patterns and docs are referenced by path with a line on why they matter.
+- The living sections (`Progress`, `Surprises & Discoveries`, `Decision Log`, `Outcomes & Retrospective`) are initialized.
+- A fresh agent could implement from only the plan and the working tree.

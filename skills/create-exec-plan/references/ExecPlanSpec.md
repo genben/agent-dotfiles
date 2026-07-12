@@ -1,152 +1,132 @@
-# Executable Plans Specification
+# Executable Plan Specification
 
-This document describes the requirements for an execution plan ("ExecPlan"), a design document that a coding agent can follow to deliver a working feature or system change. Treat the reader as a complete beginner to this repository: they have only the current working tree and the single ExecPlan file you provide. There is no memory of prior plans and no external context.
+This document defines the requirements for an Executable Plan ("ExecPlan"), a design document that a capable coding agent can follow to deliver a working, observable change.
 
 Terminology:
 
-- Executable Plan Specification (ExecPlanSpec.md): This document, describing how to create, follow, and maintain an executable plan.
+- Executable Plan Specification (ExecPlanSpec.md): this document — the rules for writing and maintaining a plan.
+- Executable Plan, or simply Plan (`plan.md`): a structured plan of work produced from the user's requirements according to this specification. It carries the requirements, milestones, and the running record of progress and decisions.
 
-- Executable Plan or simply Plan (plan.md): A structured plan of work produced from the user's requirements according to this Executable Plan Specification. It contains the requirements, tasks, and progress of the work.
+## Audience and Core Principle
 
-## How to use this specification
+Write for a capable coding agent (or engineer) who has the current working tree and this single plan file — and no memory of the conversation in which the plan was created. The reader can list, read, and search files, run the project, run tests, and spawn sub-agents. They do not need code tutoring, glossaries for common technical terms, or expected command transcripts.
 
-When authoring an executable plan, follow this Execution Plan Specification (ExecPlanSpec.md) _to the letter_. If it is not in your context, refresh your memory by reading the entire ExcecPlanSpec.md file. Be thorough in reading (and re-reading) source material to produce an accurate specification. When creating an execution plan (plan.md), start from the skeleton and flesh it out as you do your research.
+**The plan documents the desired outcome, not the concrete steps to get there.** The implementer decides how to write the code; the plan tells them what must be true when they are done and why it matters.
 
-When implementing an executable plan (plan.md), do not prompt the user for "next steps"; simply proceed to the next milestone. Keep all sections up to date, add or split entries in the list at every stopping point to affirmatively state the progress made and next steps. Resolve ambiguities autonomously, and commit frequently.
+The plan must be self-contained in exactly the things that cannot be re-derived from the repository:
 
-When discussing an executable plan (plan.md), record decisions in a log in the spec for posterity; it should be unambiguously clear why any change to the plan was made. Plans are living documents, and it should always be possible to restart from _only_ the Plan and no other work.
+- the requirements and their intent — why the work matters, ideally as user stories ("As a tenant admin, I can ... so that ..."),
+- constraints and non-goals,
+- decisions already made, with rationale,
+- acceptance criteria for each milestone and for the change as a whole.
 
-When researching a design with challenging requirements or significant unknowns, use milestones to implement proof of concepts, "toy implementations", etc., that allow validating whether the user's proposal is feasible. Read the source code of libraries by finding or acquiring them, research deeply, and include prototypes to guide a fuller implementation.
+The plan must NOT contain what the implementer can produce or discover better at implementation time:
 
-## Requirements
+- pre-written code: snippets, diffs, function bodies, or class/interface definitions to paste in,
+- prescriptive edit-by-edit sequences ("in file X, add line Y after line Z"),
+- re-explanations of code that already exists in the repository.
 
-NON-NEGOTIABLE REQUIREMENTS:
+References beat inclusions. Instead of pasting code or re-describing a subsystem, point at it: name an existing file that demonstrates the pattern to follow, a module that owns the behavior being changed, or a standards document that applies — each with one line saying why it is relevant. External URLs are acceptable with a short note on what is there; extract into the plan only the specific facts the implementer cannot get from the repository.
 
-* Every Plan must be fully self-contained. Self-contained means that in its current form it contains all knowledge and instructions needed for a novice to succeed. Although, references to other files or URLs are acceptable as long as they are accompanied by a short description of what content is there.
-* Every Plan is a living document. Contributors are required to revise it as progress is made, as discoveries occur, and as design decisions are finalized. Each revision must remain fully self-contained.
-* Every Plan must enable a complete novice to implement the feature end-to-end without prior knowledge of this repo.
-* Every Plan must produce a demonstrably working behavior, not merely code changes to "meet a definition".
-* Every Plan must define every term of art in plain language or do not use it.
+## Non-Negotiable Requirements
 
-Purpose and intent come first. Begin by explaining, in a few sentences, why the work matters from a user's perspective: what someone can do after this change that they could not do before, and how to see it working. Then guide the reader through the exact steps to achieve that outcome, including what to edit, what to run, and what they should observe.
-
-The agent executing your plan can list files, read files, search, run the project, and run tests. It does not know any prior context and cannot infer what you meant from earlier milestones. Repeat any assumption you rely on. You can point to external blogs or docs, but extract the critical pieces of information from the external sources and summarize the rest in the Plan. If a Plan builds upon a prior Plan and that file is checked in, incorporate it by reference. If it is not, you must include all relevant context from that plan.
-
-## Guidelines
-
-Self-containment and plain language are paramount. If you introduce a phrase that is not ordinary English ("daemon", "middleware", "RPC gateway", "filter graph"), define it immediately and remind the reader how it manifests in this repository (for example, by naming the files or commands where it appears). Do not say "as defined previously" or "according to the architecture doc." Include the needed explanation here, even if you repeat yourself.
-
-Avoid common failure modes. Do not rely on undefined jargon. Do not describe "the letter of a feature" so narrowly that the resulting code compiles but does nothing meaningful. Do not outsource key decisions to the reader. When ambiguity exists, resolve it in the plan itself and explain why you chose that path. Err on the side of over-explaining user-visible effects and under-specifying incidental implementation details.
-
-Anchor the plan with observable outcomes. State what the user can do after implementation, the commands to run, and the outputs they should see. Acceptance should be phrased as behavior a human can verify ("after starting the server, navigating to [http://localhost:8080/health](http://localhost:8080/health) returns HTTP 200 with body OK") rather than internal attributes ("added a HealthCheck struct"). If a change is internal, explain how its impact can still be demonstrated (for example, by running tests that fail before and pass after, and by showing a scenario that uses the new behavior).
-
-Specify repository context explicitly. Name files with full repository-relative paths, name functions and modules precisely, and describe where new files should be created. If touching multiple areas, include a short orientation paragraph that explains how those parts fit together so a novice can navigate confidently. When running commands, show the working directory and exact command line. When outcomes depend on environment, state the assumptions and provide alternatives when reasonable.
-
-Be idempotent and safe. Write the steps so they can be run multiple times without causing damage or drift. If a step can fail halfway, include how to retry or adapt. If a migration or destructive operation is necessary, spell out backups or safe fallbacks. Prefer additive, testable changes that can be validated as you go.
-
-Validation is not optional. Include instructions to run tests, to start the system if applicable, and to observe it doing something useful. Describe comprehensive testing for any new features or capabilities. Include expected outputs and error messages so a novice can tell success from failure. Where possible, show how to prove that the change is effective beyond compilation (for example, through a small end-to-end scenario, a CLI invocation, or an HTTP request/response transcript). State the exact test commands appropriate to the project’s toolchain and how to interpret their results.
-
-Capture evidence. When your steps produce terminal output, short diffs, or logs, include them inside the single fenced block as indented examples. Keep them concise and focused on what proves success. If you need to include a patch, prefer file-scoped diffs or small excerpts that a reader can recreate by following your instructions rather than pasting large blobs.
+- Every Plan is a living document. It must be revised as progress is made, discoveries occur, and decisions are finalized, and every revision must keep it sufficient for a fresh agent to resume from the plan and working tree alone.
+- Every Plan must target a demonstrably working behavior, not merely code changes that "meet a definition". Acceptance criteria are phrased as observable behavior, never as internal attributes ("after starting the server, `GET /health` returns HTTP 200" — not "a HealthCheck class exists").
+- Every milestone must be independently implementable, testable, and acceptable. Testing and validation happen at the end of each milestone, never deferred to the final one.
+- Every Plan resolves ambiguity itself. Requirements-level decisions are made in the plan (with rationale in the Decision Log) or listed in Open Questions for the user — never silently delegated to the implementer. Implementation-level choices belong to the implementer.
+- Use repository-relative paths everywhere. Never machine-specific absolute paths (home directories, worktrees, temp dirs).
 
 ## Milestones
 
-Milestones are narrative, not bureaucracy. If you break the work into milestones, introduce each with a brief paragraph that describes the scope, what will exist at the end of the milestone that did not exist before, the commands to run, and the acceptance you expect to observe. Keep it readable as a story: goal, work, result, proof. Progress and milestones are distinct: milestones tell the story, progress tracks granular work. Both must exist. Never abbreviate a milestone merely for the sake of brevity, do not leave out details that could be crucial to a future implementation.
+Split complex work into milestones that each deliver a verifiable increment. Each milestone states:
 
-Each milestone must be independently verifiable and incrementally implement the overall goal of the execution plan.
+- **Goal** — a short paragraph: what exists at the end of this milestone that did not exist before, and how it moves the overall purpose forward.
+- **Acceptance criteria** — a checklist of observable behaviors, including the scenarios and edge cases that tests must cover, described in prose (not as a list of test names or function signatures — the implementer decides how to organize the tests). Cover both positive and negative cases where the behavior is conditional.
+- **Validation** — the exact commands to run (with working directory, when not the repo root) that prove the criteria are met.
 
-## Living plans and design decisions
+Sizing guidance: a milestone should be one coherent review unit — small enough for a single implementer pass and an adversarial review, large enough to be independently demonstrable. Prefer additive changes that keep the suite green throughout; when a change is risky (migrations, destructive operations, wide refactors), the milestone must state the safety approach (backup, rollback path, or parallel implementation retired in a later milestone).
 
-* Plans are living documents. As you make key design decisions, update the plan to record both the decision and the thinking behind it. Record all decisions in the `Decision Log` section.
-* Plans must contain and maintain a `Progress` section, a `Surprises & Discoveries` section, a `Decision Log`, and an `Outcomes & Retrospective` section. These are not optional.
-* When you discover unexpected bugs or behavior, or inverse/unapply semantics that shaped your approach, capture those observations in the `Surprises & Discoveries` section with short evidence snippets (test output is ideal).
-* If you change course mid-implementation, document why in the `Decision Log` and reflect the implications in `Progress`. Plans are guides for the next contributor as much as checklists for you.
-* At completion of a major task or the full plan, write an `Outcomes & Retrospective` entry summarizing what was achieved, what remains, and lessons learned.
+When requirements carry significant unknowns, it is encouraged to make the first milestone a spike or prototype that de-risks the decision — clearly labeled as such, with criteria for promoting or discarding it.
 
-# Prototyping milestones and parallel implementations
+## Living Sections
 
-It is acceptable—-and often encouraged—-to include explicit prototyping milestones when they de-risk a larger change. Keep prototypes additive and testable. Clearly label the scope as “prototyping”; describe how to run and observe results; and state the criteria for promoting or discarding the prototype.
+Every Plan maintains these four sections. They are not optional, and keeping them current is part of implementing the plan:
 
-Prefer additive code changes followed by subtractions that keep tests passing. Parallel implementations (e.g., keeping an adapter alongside an older path during migration) are fine when they reduce risk or enable tests to continue passing during a large migration. Describe how to validate both paths and how to retire one safely with tests. When working with multiple new libraries or feature areas, consider creating spikes that evaluate the feasibility of these features _independently_ of one another, proving that the external library performs as expected and implements the features we need in isolation.
+- **Progress** — checkbox list of granular work items with timestamps and commit hashes. Every stopping point is recorded here, splitting partially done items into done/remaining so the actual state is always readable.
+- **Surprises & Discoveries** — unexpected behavior, bugs, or insights found during implementation, each with concise evidence (test output is ideal). This is high-value context for every later agent; record surprises when they happen, not at the end.
+- **Decision Log** — every requirements-level or course-changing decision, with rationale and date. It must be unambiguous why the plan changed, so a later reader never re-litigates a settled question.
+- **Outcomes & Retrospective** — at completion (or abandonment): what was achieved versus the original purpose, what remains, lessons learned.
 
 ## Skeleton of a Good Executable Plan
 
 ```md
-# <Short, action-oriented description>
- 
-This Execution Plan is a living document. The sections `Progress`, `Surprises & Discoveries`, `Decision Log`, and `Outcomes & Retrospective` must be kept up to date as work proceeds.
- 
-This document must be maintained in accordance with [Executable Plan Specification](~/.agents/templates/ExecPlanSpec.md).
- 
-## Purpose / Big Picture
- 
-Explain in a few sentences what someone gains after this change and how they can see it working. State the user-visible behavior you will enable.
- 
-## Progress
- 
-Use a list with checkboxes to summarize granular steps. Every stopping point must be documented here, even if it requires splitting a partially completed task into two (“done” vs. “remaining”). This section must always reflect the actual current state of the work.
- 
-- [x] (2025-10-01 13:00) Example completed step (git commit: HASH).
-- [ ] Example incomplete step.
-- [ ] Example partially completed step (completed: X; remaining: Y).
- 
-Use timestamps to measure rates of progress. Include git commits where the task was completed.
- 
-## Surprises & Discoveries
- 
-Document unexpected behaviors, bugs, optimizations, or insights discovered during implementation. Provide concise evidence.
- 
-- Observation: …
-  Evidence: …
- 
-## Decision Log
- 
-Record every decision made while working on the plan in the format:
- 
-- Decision: …
-  Rationale: …
-  Date/Author: …
- 
-## Outcomes & Retrospective
- 
-Summarize outcomes, gaps, and lessons learned at major milestones or at completion. Compare the result against the original purpose.
- 
-## Context and Orientation
- 
-Describe the current state relevant to this task as if the reader knows nothing. Name the key files and modules by full path. Define any non-obvious term you will use. Do not refer to prior plans.
- 
-## Plan of Work
- 
-Describe the sequence of edits and additions. For each edit, name the file and location (function, module) and what to insert or change. Keep it concrete and minimal.
+# <Short, action-oriented title>
 
-Large code snippets should be outsourced to external files and included by reference in this Plan (one file per milestone/phase).
- 
-## Concrete Steps
- 
-State the exact commands to run and where to run them (working directory, relative to the repo root). When a command generates output, show a short expected transcript so the reader can compare. This section must be updated as work proceeds.
- 
-## Validation and Acceptance
- 
-Describe how to start or exercise the system and what to observe. Phrase acceptance as behavior, with specific inputs and outputs. If tests are involved, say "run <project’s test command> and expect <N> passed; the new test <name> fails before the change and passes after>".
- 
-## Idempotence and Recovery
- 
-If steps can be repeated safely, say so. If a step is risky, provide a safe retry or rollback path. Keep the environment clean after completion.
- 
-## Artifacts and Notes
- 
-Include the most important transcripts, diffs, or snippets as indented examples. Keep them concise and focused on what proves success.
- 
-## Interfaces and Dependencies
- 
-Be prescriptive. Name the libraries, modules, and services to use and why. Specify the types, traits/interfaces, and function signatures that must exist at the end of the milestone. Prefer stable names and paths such as `crate::module::function` or `package.submodule.Interface`. E.g.:
- 
-In crates/foo/planner.rs, define:
- 
-    pub trait Planner {
-        fn plan(&self, observed: &Observed) -> Vec<Action>;
-    }
+This Executable Plan is a living document maintained according to the Executable Plan
+Specification (see the create-exec-plan skill). The sections Progress, Surprises &
+Discoveries, Decision Log, and Outcomes & Retrospective must be kept up to date.
+
+## Purpose / Big Picture
+
+Why this work matters and what someone can do after it that they could not before.
+User stories where they fit. How to see the result working.
+
+## Non-Goals
+
+What this plan deliberately does not cover, so implementers do not drift into it.
+
+## Context and Orientation
+
+The current state relevant to this task: key modules and files by repository-relative
+path, the patterns to follow (named example files), applicable standards documents,
+and the validation commands used in this repository. Orientation, not a tutorial —
+enough for the implementer to know where to look, not a re-explanation of the code.
+
+## Constraints and Decided Choices
+
+Hard constraints (compatibility, security, performance) and design decisions already
+made with the user, each with a one-line rationale. Anything still open goes to
+Open Questions instead.
+
+## Milestones
+
+### Milestone 1: <name>
+
+Goal: ...
+
+Acceptance criteria:
+- [ ] <observable behavior>
+- [ ] <scenario or edge case tests must cover, in prose>
+
+Validation: <exact commands>
+
+### Milestone 2: <name>
+...
+
+## Open Questions
+
+Questions only the user can answer. Must be resolved (moved into Decided Choices or
+Non-Goals) before implementation starts; empty is the goal state.
+
+## Progress
+
+- [x] (2026-01-15 13:00) Example completed step (commit: HASH).
+- [ ] Example remaining step.
+
+## Surprises & Discoveries
+
+- Observation: ...
+  Evidence: ...
+
+## Decision Log
+
+- Decision: ...
+  Rationale: ...
+  Date: ...
+
+## Outcomes & Retrospective
+
+(at completion)
 ```
 
-If you follow the guidance above, a single, stateless agent -- or a human novice -- can read your Plan from top to bottom and produce a working, observable result. That is the bar: SELF-CONTAINED, SELF-SUFFICIENT, NOVICE-GUIDING, OUTCOME-FOCUSED.
-
-When you revise a plan, you must ensure your changes are comprehensively reflected across all sections, including the living document sections, and you must write a note at the bottom of the plan describing the change and the reason why. Executable Plans must describe not just the what but the why for almost everything.
+The bar: a fresh, stateless agent reading the Plan top to bottom — with the working tree but no conversation history — knows what to build, what "done" means for each milestone, which questions are settled and why, and can prove the result works. OUTCOME-FOCUSED, SELF-CONTAINED IN REQUIREMENTS AND DECISIONS, VERIFIABLE AT EVERY MILESTONE.
