@@ -52,6 +52,7 @@ Mode: cmux | in-process   cmux group: {workspace_group:N / anchor ref, cmux mode
 - Commits (cherry-pick order): {sha — subject, per line; mark commits needing a split and what stays behind}
 - Files: {list}
 - State: pending | worktree-created | extracted | tests-green | pr-open | in-review (round N) | review-clean | merged
+- Findings (round N): {id — author — agreed/unique — verdict — withdrawn/insisted — your decision, per line}
 - Notes: {conflicts hit, redo reasons, deviations}
 
 ## Stays on the original branch
@@ -138,7 +139,7 @@ cmux read-screen --workspace {workspace_ref} --surface {surface_ref} --lines 20
 cmux send-key --workspace {workspace_ref} --surface {surface_ref} Enter   # only if the trust prompt is showing; selects "Yes, I trust this folder"
 ```
 
-Name tabs for their role: `implementer`, `reviewer`, `merger`. A rerun gets a new tab, `implementer (2)`, and a new agent name; the old tab and its session stay open for the human.
+Name tabs for their role: `implementer`, `reviewer`, `codex reviewer`, `codex validator`, `codex rebuttal`, `merger`. A rerun gets a new tab, `implementer (2)`, and a new agent name; the old tab and its session stay open for the human.
 
 ### Talking to the agents
 
@@ -162,7 +163,7 @@ cmux todo set '[{"text":"cherry-pick commits","state":"in-progress"}, …]' --wo
 
 Write the checklist once with `todo set` when you create the workspace, then advance items with `cmux todo start <n>` and `cmux todo check <n>`:
 
-`create worktree` · `cherry-pick commits` · `lint + full tests` · `push + open PR` · `describe PR` · `adversarial review` · `fix findings` · `human review` · `merge` · `back-merge + cleanup`
+`create worktree` · `cherry-pick commits` · `lint + full tests` · `push + open PR` · `describe PR` · `review (claude)` · `review (codex)` · `cross-validate findings` · `fix findings` · `human review` · `merge` · `back-merge + cleanup`
 
 Map the state to the status lane: `todo` while queued, `working` while extracting, testing, or fixing, `review` during review rounds, `needs-attention` on any failure and at every human checkpoint, `done` once merged. `needs-attention` means the workflow is stopped until a human acts — keep it for that, so one glance at the sidebar answers whether the human is needed.
 
@@ -187,7 +188,7 @@ Monitor(command: 'while true; do echo "watchdog tick"; sleep 240; done', persist
 
 On each tick, for every agent still working:
 
-1. Run `ListAgents`. Confirm the agent is listed, and note whether it's busy or idle.
+1. Run `ListAgents`. Confirm the agent is listed, and note whether it's busy or idle. A codex run is a plain process, not a peer session, so check it with `pgrep -f "codex exec"` and the mtime of its `-o` file instead; a tab sitting at a shell prompt with no output file means the run died.
 2. Compare its report file's mtime, and `git -C {worktree} log --oneline -1` and `git -C {worktree} status --porcelain`, against what you saw on the previous tick.
 3. Idle with no report file: message it and ask for its current state.
 4. Busy but unchanged across two consecutive ticks: message it. If it's waiting on a command that hung — a test run, a `gh` call — tell it to interrupt that command and retry.
@@ -195,6 +196,109 @@ On each tick, for every agent still working:
 6. Record every intervention and restart in the progress file.
 
 Stop the watchdog with `TaskStop` when the last pipeline finishes.
+
+## Adversarial review with two reviewers
+
+Every extracted PR is reviewed twice, independently: once by a **claude reviewer** and once by a **codex reviewer**. Neither sees the other's work until both have written their findings. You then dedupe the two sets, have each reviewer judge the other's unique findings, let the author of a rejected finding withdraw it or defend it, and adjudicate what reaches the implementer.
+
+`{plan-dir}` below is `docs/plans/{branch}/split-pr/` in the original worktree; every file this protocol produces lives there. If `codex` isn't on PATH, tell the human, record it in the progress file, and continue with the claude reviewer alone.
+
+### Shared findings schema
+
+Write it once per split, to `docs/plans/{branch}/split-pr/findings.schema.json`, and give it to both reviewers:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "file": {"type": "string"},
+          "line": {"type": "integer"},
+          "severity": {"type": "string", "enum": ["low", "medium", "high"]},
+          "category": {"type": "string"},
+          "title": {"type": "string"},
+          "detail": {"type": "string"},
+          "evidence": {"type": "string"},
+          "suggested_fix": {"type": "string"}
+        },
+        "required": ["id", "file", "severity", "category", "title", "detail", "evidence"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["findings"],
+  "additionalProperties": false
+}
+```
+
+Ids are `claude-1`, `claude-2`, … and `codex-1`, `codex-2`, … so every later stage can refer to a finding unambiguously.
+
+### Running the two reviewers
+
+Launch both at once, per PR. They get the same brief: review `git diff {base}...{pr-branch}` for correctness, context dropped by a cherry-pick that silently depended on branch-only code, test quality against the repo's testing standards, and scope creep — and hunt for problems rather than bless the work.
+
+A reviewer that can only read a diff is worth little. Both reviewers may run the test suite, the linters, the type checker, and any other check in the repo's CLAUDE.md, and may write throwaway probes to reproduce a suspected defect. What they must not do is change the PR: no edits to tracked files, no commits, no pushes. Fixes are the implementer's job.
+
+- **claude reviewer** — in cmux, a new tab named `reviewer`; otherwise an in-process subagent. Its brief adds: write the findings to `{plan-dir}/{pr-branch}.claude-review.json` in the schema's shape.
+- **codex reviewer** — in cmux, a new tab named `codex reviewer`; otherwise the same command through Bash with `run_in_background`:
+
+```bash
+codex exec \
+  --output-schema {plan-dir}/findings.schema.json \
+  -o {plan-dir}/{pr-branch}.codex-review.json \
+  "$(cat {plan-dir}/briefs/{pr-branch}.codex-review.md)"
+```
+
+Four things to know about driving codex:
+
+- Use plain `codex exec`, not `codex exec review`. The review subcommand ignores `--output-schema` and writes prose to `-o`; plain `exec` honors the schema exactly. Both were verified on 2026-08-22 with codex-cli 0.149.0.
+- **Pass no `--sandbox` flag.** The user's `~/.codex/config.toml` and the repo's `.codex/rules/*.rules` already decide what codex may run, and overriding the sandbox on the command line only gets in the way. In miarecweb the rules let `make test`, `make test-e2e`, and `uv run pytest` run outside the sandbox precisely so PostgreSQL and Playwright are reachable; a DB-backed functional test was verified running green under plain `codex exec`. For anything the rules don't cover, codex requests an escalation and `approvals_reviewer = "auto_review"` decides — so don't use `--dangerously-bypass-approvals-and-sandbox`. `--approve-for-me` routes approvals through automatic review as well, but it can't be combined with `--sandbox`.
+- If a repo has no such rules, expect codex to be blocked from the network and the database. Check `.codex/rules/` before you write the brief, and tell the reviewer which check commands are actually available to it.
+- `-o` is written by the codex process itself, not by a sandboxed shell command, so the findings file always lands even when the run couldn't touch the worktree.
+
+`codex exec` exits when it's done, so its tab ends at a shell prompt. Leave the tab open, as with every other tab.
+
+### Dedupe
+
+When both findings files exist, dispatch a **dedup subagent** — in-process, since it needs no tab — with both files and this instruction: match findings, never judge them. Two findings are the same when they name the same defect at the same place, however differently they're worded; two different defects in one file are not duplicates. It writes `{plan-dir}/{pr-branch}.dedup.json`:
+
+```json
+{"agreed": [{"claude_id": "claude-1", "codex_id": "codex-3", "title": "…"}],
+ "unique_claude": ["claude-2"],
+ "unique_codex": ["codex-1"]}
+```
+
+### Cross-validation
+
+Each reviewer judges the other's unique findings, accept or reject, with a reason and evidence. Verdicts use one schema, `verdicts.schema.json`: `{"verdicts": [{"finding_id": "…", "verdict": "accept|reject", "reason": "…", "evidence": "…"}]}`.
+
+- **codex validates `unique_claude`** — a fresh `codex exec` in a new tab named `codex validator`, carrying those findings inline, with the verdict schema and `-o {plan-dir}/{pr-branch}.codex-validation.json`. A validator may run the same checks the reviewers ran — reproducing or failing to reproduce a defect is the strongest verdict evidence there is.
+- **claude validates `unique_codex`** — `SendMessage` to the claude reviewer session that's still open in its tab; its context already holds the diff. It writes `{plan-dir}/{pr-branch}.claude-validation.json`.
+
+### Rebuttal
+
+Send every rejection back to the finding's author, which either withdraws it or insists, with an argument. Responses use `{"responses": [{"finding_id": "…", "response": "withdraw|insist", "argument": "…"}]}`.
+
+- **claude author** — `SendMessage` to the same reviewer session → `{pr-branch}.claude-rebuttal.json`.
+- **codex author** — a fresh `codex exec` in a new tab named `codex rebuttal`, carrying its original findings plus the rejections → `{pr-branch}.codex-rebuttal.json`.
+
+### Adjudicate
+
+You decide on the evidence, not by counting votes:
+
+- **Agreed by both** — treat as real and route to the implementer.
+- **Unique, accepted by the other reviewer** — route to the implementer.
+- **Unique, rejected, then withdrawn** — drop it, and record that it was raised and withdrawn.
+- **Unique, rejected, then insisted** — read the code yourself and settle it. If you still can't, keep it and have the implementer either fix it or explain in writing why it isn't a defect.
+
+Record the trail for every finding in the progress file — author, dedupe class, verdict, rebuttal, your decision — then send the implementer one consolidated list. After the implementer reports back, run this whole protocol again on the new diff. The loop ends on a round where nothing survives adjudication.
+
+Keep the reviewers isolated: neither may read the other's findings file before writing its own, and cross-validation is the only channel between them.
 
 ## Phase 1 — Analyze and propose
 
@@ -228,11 +332,11 @@ Keep the workspace status and checklist in step with the pipeline as each stage 
 - Full suite green in that worktree (see the actual output tail; on suspected resource contention, rerun serially before judging).
 - Commits preserved individually (no squashing during extraction), messages intact.
 
-Then dispatch an **adversarial reviewer subagent** per PR — in cmux mode, in a second tab of that PR's workspace, named `reviewer`: review the PR diff for correctness, dropped context from the original branch (a cherry-pick that silently depends on branch-only code), test quality per the repo's testing standards, and scope creep. The reviewer must try to find problems, not bless the work. Route findings back to the same implementer; loop until the reviewer has no remaining findings. Record each round in the progress file.
+Then review each PR with **two independent adversarial reviewers**, claude and codex, and run the dedupe, cross-validation, rebuttal, and adjudication protocol in "Adversarial review with two reviewers". Route what survives adjudication back to the same implementer, and repeat the protocol on the new diff. The loop ends on a round where nothing survives. Record each round in the progress file.
 
 When all PRs are review-clean: update the progress file and **report to the human** — one line per PR (URL, scope, test result, review rounds) plus anything that deviated from the approved plan.
 
-**Checkpoint 2 — stop. The human does the final review of the PRs and approves the merge set.** In cmux mode, set every PR workspace to `needs-attention` and check its `adversarial review` item first, so the sidebar shows what's waiting on the human.
+**Checkpoint 2 — stop. The human does the final review of the PRs and approves the merge set.** In cmux mode, set every PR workspace to `needs-attention` and check its `cross-validate findings` item first, so the sidebar shows what's waiting on the human.
 
 ## Phase 3 — Merge serially
 
