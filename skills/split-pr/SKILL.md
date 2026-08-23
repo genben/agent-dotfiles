@@ -24,7 +24,7 @@ Resolve these from the repository's CLAUDE.md; ask the user for whatever is miss
 - **Base branch** — usually `master` or `main` (confirm with `gh repo view --json defaultBranchRef`).
 - **Worktree init command** — the repo-specific setup for a fresh worktree (in miarecweb: `make setup`).
 - **Full test suite command** and **lint command** for the repo.
-- **Parallelism**: run extracted-PR pipelines and their full test suites truly in parallel. Serialize test runs only if a run fails from resource contention (DB/port/CPU exhaustion — rerun serially to confirm before treating a failure as real), or if the user explicitly instructed serialization before the workflow started.
+- **Parallelism**: run extracted-PR pipelines and their full test suites truly in parallel. Serialize test runs only if a run fails from resource contention (shared databases, ports, CPU — rerun the failures once the sibling runs drain, then serially, before treating any failure as real), or if the user explicitly instructed serialization before the workflow started. Never accept a suite as green from a contention-polluted run; the evidence is the tail of the clean rerun.
 
 ## Progress file (resumability)
 
@@ -48,7 +48,7 @@ Mode: cmux | in-process   cmux group: {workspace_group:N / anchor ref, cmux mode
 ## Approved grouping (Checkpoint 1: {date/pending})
 ### PR 1 — {title}
 - Branch: {name}  Worktree: {path}  PR: {#/url or pending}
-- cmux: workspace {ref + uuid}  tabs {role → surface ref}  agents {--name per role}  (cmux mode only)
+- cmux: workspace {ref + uuid}  tabs {role → surface ref}  agents {claude --name per role, codex thread id per role}  (cmux mode only)
 - Commits (cherry-pick order): {sha — subject, per line; mark commits needing a split and what stays behind}
 - Files: {list}
 - State: pending | worktree-created | extracted | tests-green | pr-open | in-review (round N) | review-clean | merged
@@ -106,7 +106,13 @@ cmux workspace create --name "{pr-branch}" --cwd "{worktree}" --focus false \
   --group workspace_group:N --group-placement end --json      # → workspace_ref
 ```
 
-Name the workspace after the branch only. cmux shows the PR link by itself, so don't add the PR number. Record the `workspace_ref` and the UUID from `cmux workspace list --json` in the progress file; the UUID survives an app restart.
+Name the workspace after the branch only — cmux shows the PR link itself.
+
+Record both identifiers in the progress file: the `workspace_ref` that `workspace create --json` returns, and the workspace UUID, which only `cmux workspace list --json` carries as `workspaces[].id` and which survives an app restart.
+
+Give every tab its own `--working-directory`; the workspace's `--cwd` seeds only the first tab.
+
+Created a workspace by mistake? Rename it for the next PR — `cmux rename-workspace --workspace {ref} "{other-pr-branch}"` — never close it.
 
 ### One tab per subagent
 
@@ -139,13 +145,13 @@ cmux read-screen --workspace {workspace_ref} --surface {surface_ref} --lines 20
 cmux send-key --workspace {workspace_ref} --surface {surface_ref} Enter   # only if the trust prompt is showing; selects "Yes, I trust this folder"
 ```
 
-Name tabs for their role: `implementer`, `reviewer`, `codex reviewer`, `codex validator`, `codex rebuttal`, `merger`. A rerun gets a new tab, `implementer (2)`, and a new agent name; the old tab and its session stay open for the human.
+Name tabs for their role: `implementer`, `reviewer`, `codex reviewer`, `merger`. One tab holds one session for all of that role's work — review, validation, and rebuttal go to the same session, which is what keeps its context. A rerun gets a new tab, `implementer (2)`, and a new agent name; the old tab and its session stay open for the human.
 
 ### Talking to the agents
 
 Keep each brief in a file under `docs/plans/{branch}/split-pr/briefs/` and give the tab a one-line command that reads it. Every brief must tell the agent to:
 
-1. Write its result as JSON to an absolute path you name, `docs/plans/{branch}/split-pr/{pr-branch}.{role}.json` in the original worktree, carrying the evidence this skill requires: PR URL, commits, file list, lint result, test command with exit code and output tail, review findings.
+1. Write its report to an absolute path you name, `docs/plans/{branch}/split-pr/{pr-branch}.{role}.md` in the original worktree, carrying the evidence this skill requires: PR URL, commits, file list, lint result, test command with exit code and output tail, review findings. Markdown with those facts is enough — don't demand a rigid structure from an agent whose only reader is another agent.
 2. Message you when it finishes, replying to the name in the `from` attribute of your message. Your first message to the agent establishes that address.
 
 Verify from that file and from your own `gh pr diff --name-only` and `gh pr view` — never from an agent's prose summary, and never by reading its screen. `cmux read-screen` is for diagnosing a stuck or dead session, not for collecting results.
@@ -188,7 +194,7 @@ Monitor(command: 'while true; do echo "watchdog tick"; sleep 240; done', persist
 
 On each tick, for every agent still working:
 
-1. Run `ListAgents`. Confirm the agent is listed, and note whether it's busy or idle. A codex run is a plain process, not a peer session, so check it with `pgrep -f "codex exec"` and the mtime of its `-o` file instead; a tab sitting at a shell prompt with no output file means the run died.
+1. Run `ListAgents`. Confirm the agent is listed, and note whether it's busy or idle. A codex session isn't a peer session: check that its process is alive (`pgrep -f codex`), that its thread advanced (`select max(completed_at) from thread_turns where thread_id='{thread-id}';`), and that its output file exists; nudge it with `codex queue`. A codex tab back at a shell prompt means that session exited.
 2. Compare its report file's mtime, and `git -C {worktree} log --oneline -1` and `git -C {worktree} status --porcelain`, against what you saw on the previous tick.
 3. Idle with no report file: message it and ask for its current state.
 4. Busy but unchanged across two consecutive ticks: message it. If it's waiting on a command that hung — a test run, a `gh` call — tell it to interrupt that command and retry.
@@ -203,40 +209,23 @@ Every extracted PR is reviewed twice, independently: once by a **claude reviewer
 
 `{plan-dir}` below is `docs/plans/{branch}/split-pr/` in the original worktree; every file this protocol produces lives there. If `codex` isn't on PATH, tell the human, record it in the progress file, and continue with the claude reviewer alone.
 
-### Shared findings schema
+### Shared findings format
 
-Write it once per split, to `docs/plans/{branch}/split-pr/findings.schema.json`, and give it to both reviewers:
+Both reviewers write plain Markdown, one `##` block per finding, to `{plan-dir}/{pr-branch}.claude-review.md` and `{plan-dir}/{pr-branch}.codex-review.md`:
 
-```json
-{
-  "type": "object",
-  "properties": {
-    "findings": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "id": {"type": "string"},
-          "file": {"type": "string"},
-          "line": {"type": "integer"},
-          "severity": {"type": "string", "enum": ["low", "medium", "high"]},
-          "category": {"type": "string"},
-          "title": {"type": "string"},
-          "detail": {"type": "string"},
-          "evidence": {"type": "string"},
-          "suggested_fix": {"type": "string"}
-        },
-        "required": ["id", "file", "severity", "category", "title", "detail", "evidence"],
-        "additionalProperties": false
-      }
-    }
-  },
-  "required": ["findings"],
-  "additionalProperties": false
-}
+```markdown
+## claude-3 — Export query drops the tenant filter
+- severity: high
+- category: correctness
+- file: miarecweb/views/export.py:142
+- evidence: `uv run pytest miarecweb/tests/functional_tests/test_export.py::test_scope` fails on this branch and passes on {base}
+- detail: …
+- suggested fix: …
 ```
 
-Ids are `claude-1`, `claude-2`, … and `codex-1`, `codex-2`, … so every later stage can refer to a finding unambiguously.
+Every finding needs an id — `claude-N` from the claude reviewer, `codex-N` from codex — since every later stage refers to findings by id. Omit fields that don't apply.
+
+Judge a report by its ids, evidence, and whether it's actionable; queue a correction when it isn't.
 
 ### Running the two reviewers
 
@@ -244,48 +233,89 @@ Launch both at once, per PR. They get the same brief: review `git diff {base}...
 
 A reviewer that can only read a diff is worth little. Both reviewers may run the test suite, the linters, the type checker, and any other check in the repo's CLAUDE.md, and may write throwaway probes to reproduce a suspected defect. What they must not do is change the PR: no edits to tracked files, no commits, no pushes. Fixes are the implementer's job.
 
-- **claude reviewer** — in cmux, a new tab named `reviewer`; otherwise an in-process subagent. Its brief adds: write the findings to `{plan-dir}/{pr-branch}.claude-review.json` in the schema's shape.
-- **codex reviewer** — in cmux, a new tab named `codex reviewer`; otherwise the same command through Bash with `run_in_background`:
+- **claude reviewer** — in cmux, a new tab named `reviewer`; otherwise an in-process subagent. Its brief adds: write the findings to `{plan-dir}/{pr-branch}.claude-review.md` in the format above.
+- **codex reviewer** — in cmux, the **interactive TUI** in a new tab named `codex reviewer`, so the human watches a real interface instead of a console dump, and one session carries the review, its validation pass, and its rebuttal:
 
-```bash
-codex exec \
-  --output-schema {plan-dir}/findings.schema.json \
-  -o {plan-dir}/{pr-branch}.codex-review.json \
-  "$(cat {plan-dir}/briefs/{pr-branch}.codex-review.md)"
-```
+  ```bash
+  codex --approve-for-me "$(cat {plan-dir}/briefs/{pr-branch}.codex-review.md)"
+  ```
 
-Four things to know about driving codex:
+  Outside cmux there's nothing to watch, so run the non-interactive form in the background instead. Tell that brief to make the report its final message, and `-o` captures it:
 
-- Use plain `codex exec`, not `codex exec review`. The review subcommand ignores `--output-schema` and writes prose to `-o`; plain `exec` honors the schema exactly. Both were verified on 2026-08-22 with codex-cli 0.149.0.
+  ```bash
+  codex exec \
+    -o {plan-dir}/{pr-branch}.codex-review.md \
+    "$(cat {plan-dir}/briefs/{pr-branch}.codex-review.md)"
+  ```
+
+What to know about driving codex:
+
+- **Address an interactive session by its thread id.** Interactive codex has no `--name`, so open the brief with a unique marker line — `split-pr {branch} {pr-branch} codex-reviewer` — and resolve the thread from codex's own history once the session starts:
+
+  ```bash
+  sqlite3 ~/.codex/thread_history_1.sqlite \
+    "select thread_id from thread_items where item_type='userMessage'
+      and item_json like '%{marker}%' order by created_at_ms desc limit 1;"
+  ```
+
+  Match on the marker, never on "the newest thread" — parallel PR pipelines would pick up each other's sessions. Record the thread id in the progress file.
+- **Send follow-ups with `codex queue --thread {thread-id} --message "…"`.** The running TUI picks the message up and works on it; this is the codex counterpart of `SendMessage`, and it keeps one session's context across the review, validation, and rebuttal rounds.
+- **Collect results from files.** The brief names the report format and the exact output path, and the TUI session writes that file itself with a shell command. Read it and judge it on content, not on shape; queue a correction if ids or evidence are missing. To read what a session last said without scraping the screen:
+
+  ```bash
+  sqlite3 ~/.codex/thread_history_1.sqlite \
+    "select item_json from thread_items where thread_id='{thread-id}'
+      and item_type='agentMessage' order by rollout_ordinal desc limit 1;"
+  ```
+
+- **Don't use `codex exec review`.** It follows its own review format instead of the one your brief asks for, and it runs under a tighter sandbox — a verified run reported that it couldn't reach PostgreSQL, so its findings rest on reading alone. Plain `codex` and `codex exec` were both verified on 2026-08-22 with codex-cli 0.149.0.
 - **Pass no `--sandbox` flag.** The user's `~/.codex/config.toml` and the repo's `.codex/rules/*.rules` already decide what codex may run, and overriding the sandbox on the command line only gets in the way. In miarecweb the rules let `make test`, `make test-e2e`, and `uv run pytest` run outside the sandbox precisely so PostgreSQL and Playwright are reachable; a DB-backed functional test was verified running green under plain `codex exec`. For anything the rules don't cover, codex requests an escalation and `approvals_reviewer = "auto_review"` decides — so don't use `--dangerously-bypass-approvals-and-sandbox`. `--approve-for-me` routes approvals through automatic review as well, but it can't be combined with `--sandbox`.
 - If a repo has no such rules, expect codex to be blocked from the network and the database. Check `.codex/rules/` before you write the brief, and tell the reviewer which check commands are actually available to it.
 - `-o` is written by the codex process itself, not by a sandboxed shell command, so the findings file always lands even when the run couldn't touch the worktree.
+- The brief goes in through command substitution — `codex exec … "$(cat {plan-dir}/briefs/{pr-branch}.codex-review.md)"` — so keep it in a file and let the tab command stay one line. Give every codex brief the same shared preamble (what it may run, what it must never touch, the review dimensions, the id prefix) and append a per-PR section naming the specific things to attack in that diff. A codex reviewer pointed at a generic brief returns generic findings.
+- Tell codex explicitly that it must not modify the PR. It has the same tools the implementer has, and nothing but the brief stops it from "helpfully" applying a fix.
 
-`codex exec` exits when it's done, so its tab ends at a shell prompt. Leave the tab open, as with every other tab.
+An interactive session stays alive after it answers, which is what you want: the human can open the tab and keep talking to the reviewer, and you can queue more work into it. The non-interactive `codex exec` instead exits when it's done, so its tab ends at a shell prompt. Leave the tab open, as with every other tab. A finished run leaves its report behind; a tab back at a prompt with no report means the run died — read the tab to find out why before relaunching.
 
 ### Dedupe
 
-When both findings files exist, dispatch a **dedup subagent** — in-process, since it needs no tab — with both files and this instruction: match findings, never judge them. Two findings are the same when they name the same defect at the same place, however differently they're worded; two different defects in one file are not duplicates. It writes `{plan-dir}/{pr-branch}.dedup.json`:
+When both findings files exist, dispatch a **dedup subagent** — in-process, since it needs no tab — with both files and this instruction: match findings, never judge them. Two findings are the same when they name the same defect at the same place, however differently they're worded; two different defects in one file are not duplicates. It writes `{plan-dir}/{pr-branch}.dedup.md`, listing findings by id:
 
-```json
-{"agreed": [{"claude_id": "claude-1", "codex_id": "codex-3", "title": "…"}],
- "unique_claude": ["claude-2"],
- "unique_codex": ["codex-1"]}
+```markdown
+## agreed
+- claude-1 = codex-3 — Export query drops the tenant filter
+
+## unique to claude
+- claude-2 — Replacement test asserts on the mock, not the database
+
+## unique to codex
+- codex-1 — Migration lacks a downgrade path
 ```
 
 ### Cross-validation
 
-Each reviewer judges the other's unique findings, accept or reject, with a reason and evidence. Verdicts use one schema, `verdicts.schema.json`: `{"verdicts": [{"finding_id": "…", "verdict": "accept|reject", "reason": "…", "evidence": "…"}]}`.
+Each reviewer judges the other's unique findings, accept or reject, with a reason and evidence — same Markdown shape as the findings, one block per verdict:
 
-- **codex validates `unique_claude`** — a fresh `codex exec` in a new tab named `codex validator`, carrying those findings inline, with the verdict schema and `-o {plan-dir}/{pr-branch}.codex-validation.json`. A validator may run the same checks the reviewers ran — reproducing or failing to reproduce a defect is the strongest verdict evidence there is.
-- **claude validates `unique_codex`** — `SendMessage` to the claude reviewer session that's still open in its tab; its context already holds the diff. It writes `{plan-dir}/{pr-branch}.claude-validation.json`.
+```markdown
+## codex-2 — reject
+- reason: the guard it claims is missing runs in the decorator two frames up
+- evidence: `rg "require_tenant" miarecweb/views/export.py` and the passing test it points at
+```
+
+- **codex validates `unique_claude`** — `codex queue --thread {thread-id}` into the same codex session, carrying those findings and the verdict shape, writing `{plan-dir}/{pr-branch}.codex-validation.md`. Outside cmux, a fresh `codex exec` with `-o` at that path. A validator may run the same checks the reviewers ran — reproducing or failing to reproduce a defect is the strongest verdict evidence there is.
+- **claude validates `unique_codex`** — `SendMessage` to the claude reviewer session that's still open in its tab; its context already holds the diff. It writes `{plan-dir}/{pr-branch}.claude-validation.md`.
 
 ### Rebuttal
 
-Send every rejection back to the finding's author, which either withdraws it or insists, with an argument. Responses use `{"responses": [{"finding_id": "…", "response": "withdraw|insist", "argument": "…"}]}`.
+Send every rejection back to the finding's author, which either withdraws it or insists, with an argument — one block per response:
 
-- **claude author** — `SendMessage` to the same reviewer session → `{pr-branch}.claude-rebuttal.json`.
-- **codex author** — a fresh `codex exec` in a new tab named `codex rebuttal`, carrying its original findings plus the rejections → `{pr-branch}.codex-rebuttal.json`.
+```markdown
+## claude-3 — insist
+- argument: the decorator it names runs only on the HTML view; the export endpoint is registered separately
+```
+
+- **claude author** — `SendMessage` to the same reviewer session → `{pr-branch}.claude-rebuttal.md`.
+- **codex author** — `codex queue` into the same codex session, carrying the rejections → `{pr-branch}.codex-rebuttal.md`; its own findings are already in its context. Outside cmux, a fresh `codex exec` carrying both its original findings and the rejections.
 
 ### Adjudicate
 
@@ -306,7 +336,9 @@ Dispatch an **analyst subagent** (read-only) with the base branch, feature branc
 
 > Map every commit on `{branch}` not in `{base}` (`git log {base}..HEAD --oneline`). Classify each as feature work or an unrelated change. For unrelated changes, form independent groups that would each make a coherent PR. For every commit with a generic-looking scope, check **entanglement**: does it modify files created on this branch, or code the feature commits introduced (`git log {base}..HEAD -- <file>` per touched file)? Entangled commits stay on the branch — flag them explicitly with the reason. For each group report: commits in cherry-pick order, files touched, overlaps with other groups (shared files → merge-order dependency), expected cherry-pick conflicts, and any commit that needs a **split** (part general fix, part branch-only files) with the exact hunk division and whether a replacement test must be written against base-existing entry points. Return the raw evidence (file→commit mapping), not just conclusions.
 
-Verify the analysis yourself on the two failure modes that matter: spot-check the entanglement calls, and confirm the union of groups + stays-behind + feature commits covers every commit.
+The brief must also require an **already-on-base check**: fetch the base and, for every candidate commit, establish whether its content already landed there (`git cherry {base} {branch}` marks patch-equivalent commits with `-`; a `git diff {base}...{branch} -- {files}` that is empty for a group's files says the same thing louder). A branch that has been merged from base several times can carry commits whose work reached the base through an earlier PR, and cherry-picking those produces an empty or nonsensical PR.
+
+Verify the analysis yourself on the three failure modes that matter: spot-check the entanglement calls, confirm the union of groups + stays-behind + feature commits covers every commit, and re-run the already-on-base check against a freshly fetched base before you present the grouping. In one run of this skill, three of five commits in a proposed group had already merged to master as a separate PR; catching that at Checkpoint 1 costs a minute, catching it after the worktree exists costs a rebuild.
 
 Write the proposal into the progress file, then **present it to the human**: groups, commits, files, split commits, what stays behind and why, proposed merge order.
 
@@ -321,6 +353,7 @@ For each approved group, dispatch an **implementer subagent** with this pipeline
 1. Create a worktree and branch off the up-to-date base: `git worktree add <path> -b <branch-name> {base}`. Then run the repo's worktree init command. (In cmux mode you already created the worktree, so the implementer starts at the init command.)
 2. Cherry-pick the group's commits in the approved order. For a split commit: apply only the approved hunks (`git checkout {sha} -- <files>` or apply a filtered diff), write the replacement test against a base-existing entry point, and keep the commit message's relevant content.
 3. Run lint and the **full test suite**. Fix legitimate failures; never delete or skip tests to get green.
+   Run every check in the **foreground** and don't end the turn until the report in step 5 is written. Backgrounding a suite and stopping to "wait for it" is the most common way these pipelines stall: the agent goes idle holding unreported work, and each nudge costs a round trip. Long suites are fine — the turn simply lasts as long as they do.
 4. Push, open the PR against the base with `gh pr create`, then run the `describe-pr` skill to produce its description.
 5. Report back: worktree path, branch, PR URL, tail of the test run, `gh pr diff --name-only` output.
 
@@ -329,8 +362,10 @@ Keep the workspace status and checklist in step with the pipeline as each stage 
 **Acceptance criteria you enforce before the review step:**
 
 - PR diff file list matches the approved group exactly — nothing smuggled in, nothing missing.
+- **Byte-identity with the source branch.** When the base tip is already an ancestor of the feature branch (`git merge-base --is-ancestor {base} {branch}`), every extracted file must be byte-identical to its feature-branch version: `git diff {pr-branch} {branch} -- {group files}` prints nothing. This catches a cherry-pick that silently resolved a conflict the wrong way, and it costs one command. Where a PR deliberately diverges — a replacement test, a fix demanded by review — record the exception in the progress file so the Phase 4 back-merge expects it.
 - Full suite green in that worktree (see the actual output tail; on suspected resource contention, rerun serially before judging).
 - Commits preserved individually (no squashing during extraction), messages intact.
+- **A behavior fix is pinned by a test that fails without it.** Whenever a PR claims to fix behavior, the implementer must prove falsifiability: temporarily revert the fix, show the new test fails, restore, and report the evidence (never commit the revert). Two separate failures in one run of this skill were caught only by this check — a fix no test exercised, so removing it left the suite green, and a fix that was a no-op at the mechanism level because the marking it relied on was destroyed by a serialization boundary before the code under test ran. A test written against the source of a value proves nothing about the path the value actually travels: exercise the production entry point end to end.
 
 Then review each PR with **two independent adversarial reviewers**, claude and codex, and run the dedupe, cross-validation, rebuttal, and adjudication protocol in "Adversarial review with two reviewers". Route what survives adjudication back to the same implementer, and repeat the protocol on the new diff. The loop ends on a round where nothing survives. Record each round in the progress file.
 
@@ -362,4 +397,6 @@ Finish the progress file (final diff stat before/after, review verdict) and comm
 
 ## Redo policy (applies in every phase)
 
-When rejecting subagent output, the redo message must contain: the specific acceptance criterion missed, the evidence (test output, diff line, review finding), and what "done" looks like. After two failed redos on the same criterion, take over that step yourself and note the takeover in the progress file.
+When rejecting subagent output, the redo message must contain: the specific acceptance criterion missed, the evidence (test output, diff line, review finding), and what "done" looks like. After two failed redos on the same criterion, take over that step yourself and note the takeover in the progress file. Count a session that dies or stalls mid-step as one of those failures: recover its uncommitted work from the worktree, verify it yourself rather than trusting it, and finish the step.
+
+Review fixes land as **new commits on top**. Amending an already-pushed commit needs a history rewrite that the permission layer may refuse (`git reset --soft` is a common casualty), and a force-push costs more than a clean follow-up commit is worth. Amend only the tip docs commit, only when it holds nothing else, and fall back to a follow-up commit the moment it resists. Never reword a cherry-picked commit: its message is the link back to the feature branch.
