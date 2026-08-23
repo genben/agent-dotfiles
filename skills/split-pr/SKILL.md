@@ -16,6 +16,15 @@ You manage subagents (analyst, implementer, reviewers, merger). You do not do th
 - **Take over a step yourself** only after a subagent has failed the same criterion twice.
 - Launch independent subagents in parallel (one Agent message with multiple tool uses). Honor any user or memory instruction about the agent model.
 - Subagents run as their own `claude` session in a cmux tab inside cmux, and in-process through the Agent tool everywhere else. Briefs, acceptance criteria, and the redo policy are identical either way.
+- **Messages carry findings, not essays.** State the finding, the evidence, and what "done" looks like. Cut context-setting, reassurance, and restatement of what the agent already knows. Long messages are your tokens, and they bury the instruction.
+
+## Worktree ownership (every agent, every phase)
+
+**An agent writes only in the worktree it owns.** State it in every brief.
+
+- Writable: its own worktree, plus its one report file under `docs/plans/{branch}/split-pr/`. Nothing else.
+- No commit, checkout, reset, revert, rebase, stash or `git config` on another branch — not even to restore byte-identity.
+- Anything that should change elsewhere goes in its report and a message to you. You route it; the owning agent applies it.
 
 ## Inputs (resolve before Phase 1)
 
@@ -35,30 +44,29 @@ Keep all workflow state in the **original worktree** at `docs/plans/{branch}/spl
 - **On invocation, check for an existing progress file first.** If one exists, resume — do not restart Phase 1.
 - Commit it to the original branch when the workflow completes; leaving it uncommitted while in flight is fine.
 
+**Append-only, one entry per event**, in this shape. Never rewrite or reflow an earlier entry — that keeps line numbers stable, so you and your agents can cite `split-pr-progress.md:120-140` instead of re-pasting content. Omit sections that do not apply.
+
+```markdown
+## 2026-08-23 11:22 — PR #792 round 2
+### Changes
+- c85efe8a4 optgroup test takes db_session (fixes claude-r2-1)
+### Discoveries & Surprises
+- criterion 3 unsatisfiable: pytest prints dots, so grep of own test file is 0 on every green run
+### Decisions
+- codex-r2-4 dropped: E501 ignored at pyproject.toml:548, per-file counts unchanged vs master
+```
+
+The file opens with a header block — the only part ever edited in place, because it is the resume pointer:
+
 ```markdown
 # split-pr progress — {branch}
-
-Base: {base}  Started: {date}  Status: {phase and step}
-Mode: cmux | in-process   cmux group: {workspace_group:N / anchor ref, cmux mode only}
-
-## Approved grouping (Checkpoint 1: {date/pending})
-### PR 1 — {title}
-- Branch: {name}  Worktree: {path}  PR: {#/url or pending}
-- cmux: workspace {ref + uuid}  tabs {role → surface ref}  agents {claude --name per role, codex thread id per role}  (cmux mode only)
-- Commits (cherry-pick order): {sha — subject, per line; mark commits needing a split and what stays behind}
-- Files: {list}
-- State: pending | worktree-created | extracted | tests-green | pr-open | in-review (round N) | review-clean | merged
-- Findings (round N): {id — author — agreed/unique — verdict — withdrawn/insisted — your decision, per line}
-- Notes: {conflicts hit, redo reasons, deviations}
-
-## Stays on the original branch
-- {sha — reason it is entangled}
-
-## Checkpoint 2 (ready for human review): {date/pending}
-## Merge order and results
-## Back-merge (Phase 4)
-- Conflicts resolved: … Tests: … Review: … Pushed: {sha}
+Base: {base}   Started: {date}   Mode: cmux | in-process   cmux group: {ref, cmux mode only}
+Status: {phase and step}
+PR {#} {branch} | {worktree} | {cmux workspace + agent names} | state: pending | worktree-created | extracted | tests-green | pr-open | in-review (round N) | review-clean | merged
+Stays on the original branch: {sha — reason entangled, per line}
 ```
+
+Everything after it is append-only entries. Record in them, as they happen: the approved grouping and cherry-pick order per PR, splits and what stays behind, conflicts, redo reasons, deliberate divergences the Phase 4 back-merge must expect, each finding as `id — author — agreed/unique — verdict — withdrawn/insisted — your decision`, checkpoint approvals, merge SHAs, and the back-merge result.
 
 ## Running inside cmux
 
@@ -337,7 +345,7 @@ Keep the workspace status and checklist in step with the pipeline: `working` fro
 
 - PR diff file list matches the approved group exactly — nothing smuggled in, nothing missing.
 - **Byte-identity with the source branch.** When the base tip is already an ancestor of the feature branch (`git merge-base --is-ancestor {base} {branch}`), `git diff {pr-branch} {branch} -- {group files}` must print nothing; anything else means a cherry-pick resolved a conflict the wrong way. Record deliberate divergences — a replacement test, a fix demanded by review — in the progress file so the Phase 4 back-merge expects them.
-- Full suite green in that worktree, evidenced by the actual output tail.
+- **Full suite green from a LOCAL run in that worktree**, evidenced by the output tail. CI is never the acceptance signal. On contention, serialize the runs — never fall back to citing CI.
 - Commits preserved individually (no squashing during extraction), messages intact.
 - **A behavior fix is pinned by a test that fails without it.** The implementer proves falsifiability: temporarily revert the fix, show the new test fails, restore, and report the evidence — never commit the revert. A test written against the source of a value proves nothing about the path that value travels; exercise the production entry point end to end.
 
