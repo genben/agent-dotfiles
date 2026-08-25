@@ -21,11 +21,13 @@
 - Prefer `uv` wrapper for commands when available (e.g., `uv run pytest` instead of `pytest`).
 
 ## Response Formatting
-- Prefer a human-friendly summary: short headings + bullets.
+- For reviews, status updates, and task-completion reports, always use short headings and bullet points.
+- When a report contains two or more distinct findings, checks, changes, or outcomes, present them as bullets rather than prose.
+- Treat this structure as the minimum appropriate formatting for reports.
+- Omit empty sections.
 - When reporting actions, include: What changed, Files affected, Tests run, Next steps.
 - Keep language plain and avoid raw command logs unless asked.
 - Use the "Template Reply" section below as the response format reference.
-- Omit any section entirely if it has no items.
 
 ### Template Reply
 ```markdown
