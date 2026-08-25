@@ -42,7 +42,14 @@ Keep all workflow state in the **original worktree** at `docs/plans/{branch}/spl
 - Create it at the start of Phase 1; update it at **every state transition** (grouping approved, worktree created, tests green, PR opened, review round done, PR merged, back-merge done), not in batches at phase ends.
 - Record concrete identifiers: commit SHAs per group, worktree paths, branch names, PR numbers and URLs, test-run results, review round counts, resolved conflicts.
 - **On invocation, check for an existing progress file first.** If one exists, resume — do not restart Phase 1.
-- Commit it to the original branch when the workflow completes; leaving it uncommitted while in flight is fine.
+- **Never commit the workflow state.** When creating the progress file, also create `docs/plans/{branch}/.gitignore` containing exactly:
+
+  ```
+  split-pr-progress.md
+  split-pr/
+  ```
+
+  The progress file, briefs, reports, and review/validation files are session state, not repository content — they stay local and out of every commit, including the final one. Commit the `.gitignore` itself only if the plan directory holds other, committed documents that would otherwise expose the state files to a stray `git add`.
 
 **Append-only, one entry per event**, in this shape. Never rewrite or reflow an earlier entry — that keeps line numbers stable, so you and your agents can cite `split-pr-progress.md:120-140` instead of re-pasting content. Omit sections that do not apply.
 
@@ -281,10 +288,19 @@ When both findings files exist, dispatch a **dedup subagent** (in-process) with 
 
 Each reviewer judges the other's unique findings, accept or reject, with a reason and evidence — one block per verdict. A validator may run the same checks the reviewers ran; reproducing, or failing to reproduce, a defect is the strongest verdict evidence.
 
+The validator's job is critical judgment, not technical confirmation — instruct it to attack each finding on two independent axes and reject on either:
+
+1. **Is it real?** Does the claimed defect actually occur as described (the classic reproduce-or-refute pass)?
+2. **Does it matter?** Reject as slop any finding whose failing input no production path constructs, whose fix would be defensive code for a problem that does not exist, or whose only consequence is degraded behavior on inputs the application can never produce. Reproducibility is not importance: a validator that reproduces a probe must still ask what breaks for a real user, and reject when the answer is nothing. Defensive code is slop — a suggested fix that adds guards, fallbacks, or handling for unreachable states is grounds to reject the finding, not to soften it.
+
 ```markdown
 ## codex-2 — reject
 - reason: the guard it claims is missing runs in the decorator two frames up
 - evidence: `rg "require_tenant" miarecweb/views/export.py` and the passing test it points at
+
+## codex-4 — reject
+- reason: real as probed, but no production path constructs a self-referential mapping; the fix would be defensive code for an impossible input
+- evidence: `rg` over all mapping constructors — every one builds a fresh literal dict; nothing stores a container into its own mapping
 ```
 
 - **codex validates `unique to claude`** — `codex queue --thread {thread-id}` into the same session, writing `{plan-dir}/{pr-branch}.codex-validation.md`. Outside cmux, a fresh `codex exec` with `-o` at that path.
@@ -311,7 +327,15 @@ Decide on the evidence, not by counting votes:
 - **Unique, rejected, then withdrawn** — drop it; record that it was raised and withdrawn.
 - **Unique, rejected, then insisted** — read the code yourself and settle it. If it stays unsettled, keep it and have the implementer fix it or explain in writing why it isn't a defect.
 
+**You own the quality of the outcome, and quality includes what does NOT get written.** Acceptance is a necessary condition to route a finding, never a sufficient one — apply these bars before anything reaches the implementer:
+
+- **No defensive code for problems that do not exist.** A finding becomes a fix only when it names a production entry point and an input that reaches the defect today. A reviewer probe that *constructs* the failing input proves the defect is real, not that it matters — self-referential structures, adversarial orderings, and API shapes with zero call sites are adjudicated as document-or-drop, however reproducible. Every landed fix is permanent read/review/maintain cost for the repo's owners; a corner nothing can reach is not worth that cost.
+- **Take low-severity findings with a grain of salt.** Reviewers are prompted to hunt, so they will always return something; volume and reproducibility are not importance. For a low-severity finding, ask what breaks for a real user if it ships unfixed — if the honest answer is "nothing", drop it and record why.
+- **Expect the loop to drift theoretical.** Round N+1's findings are usually weaker than round N's; when a round's survivors are only pathological-input polish, END the loop instead of routing them. Two clean-enough rounds beat five rounds of hardening nobody asked for.
+
 Record the trail for every finding in the progress file — author, dedupe class, verdict, rebuttal, your decision — then send the implementer one consolidated list. After the implementer reports back, run the protocol again on the new diff. The loop ends on a round where nothing survives adjudication.
+
+State the production-path bar in every reviewer brief so reviewers self-filter: findings must name the production entry point and the input that reaches the defect, or explicitly label themselves theoretical so adjudication can drop them cheaply.
 
 ## Phase 1 — Analyze and propose
 
@@ -373,9 +397,9 @@ Dispatch a **merger subagent** in the original worktree — in cmux mode, in a n
 
 Then dispatch an **adversarial reviewer** on the reduced diff (`{base}...HEAD`) — the final pre-merge review of the feature PR itself.
 
-**Denoise the PR description too**: rerun the `describe-pr` skill against the reduced diff and update the description with `gh pr edit`, linking the extracted PRs where that adds context. If the repo keeps PR description files (for example `docs/prs/`), regenerate the original PR's file and commit it alongside the progress file.
+**Denoise the PR description too**: rerun the `describe-pr` skill against the reduced diff and update the description with `gh pr edit`, linking the extracted PRs where that adds context. If the repo keeps PR description files (for example `docs/prs/`), regenerate the original PR's file and commit it.
 
-Finish the progress file (final diff stat before and after, review verdict) and commit it. In cmux mode, check the `back-merge + cleanup` item on each PR workspace and stop the watchdog. **Report to the human**: diff size reduction, test results, review outcome. The human approves and merges the original PR.
+Finish the progress file (final diff stat before and after, review verdict) — it stays uncommitted, covered by the plan directory's `.gitignore`. In cmux mode, check the `back-merge + cleanup` item on each PR workspace and stop the watchdog. **Report to the human**: diff size reduction, test results, review outcome. The human approves and merges the original PR.
 
 ## Redo policy (applies in every phase)
 
