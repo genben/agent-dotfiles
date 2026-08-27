@@ -7,9 +7,12 @@ description: "Layered technical-writing standard: Diátaxis structure, Google de
 
 The goal is writing a tired engineer understands on the first read. Four layers get you there, one question each: what kind of document is this, how do sentences address the reader, how much does each sentence carry, and can any sentence be read two ways. Apply all four.
 
-Three rules sit above the layers:
+Five rules sit above the layers:
+
+- **Lead with the point.** The first sentence of a document or section states its conclusion; explanation and background follow. A reader who stops after one sentence still leaves with the message.
 
 - **Cut every word that does no work.** If the sentence survives without a word, the word goes. "In order to" is "to". "It is important to note that" is nothing.
+- **Economy applies to the document, not just the sentence.** A document of tight sentences can still say too much. Include a fact only where the reader needs it, once. When the section's question is answered, stop.
 - **Use the short, everyday word.** "Use", not "utilize". "Help", not "facilitate". "Do", not "perform". A long word has to buy its length with precision.
 - **When a rule makes a sentence worse, fix the sentence another way or leave it alone.** The rules serve the reader. A sentence that follows every rule and sounds like a machine wrote it has failed.
 
