@@ -5,7 +5,7 @@ description: Produce human-friendly evidence of the work on a branch (screenshot
 
 # Show me
 
-Demonstrate the work in a form a human can judge at a glance. Evidence is also a quality gate: if you cannot demonstrate the described behavior, the work may not do what it claims. Report the gap; never fake or stage a result.
+Demonstrate the work in a form a human can judge at a glance. Evidence is also a quality gate: if you cannot demonstrate the described behavior, the work may not do what it claims. Report the gap; never fake or stage a result. Apply the technical-writing skill to all prose: manifests, diagram notes, and explainer text.
 
 ## Storage
 
@@ -35,7 +35,12 @@ One paragraph: what this evidence demonstrates.
 ## Choose the medium
 
 - User-facing behavior: screen recording or screenshots of the real product. Drive web UIs with the playwright-cli skill; launch the app with the run skill. Show before and after states when the contrast matters; capture "before" from the base branch in a temporary worktree.
-- Architecture or flow changes: a markdown file with Mermaid diagrams embedded as ```mermaid blocks, plus short notes. GitHub renders Mermaid natively.
+- Architecture or flow changes: a markdown file with Mermaid diagrams embedded as ```mermaid blocks, plus short notes. GitHub renders Mermaid natively, into a narrow column, so optimize for that:
+  - Prefer `flowchart TD`/`TB`; a wide `LR` row of every component shrinks to fit until the text is unreadable. Use `LR` only for short, truly linear flows.
+  - Group layers vertically with `subgraph` blocks instead of stretching one row across.
+  - Split whole-system maps into separate diagrams: context, data flow, runtime, and ownership read better apart.
+  - Keep node labels short (`<br/>` to wrap); explanation belongs in the notes around the diagram.
+  - Never set colors; the renderer themes the diagram for light and dark.
 - A visual UI, layout, state comparison, or concept too dense for Mermaid: one focused HTML file, `show-me-{description}.html`. A diagram, an infographic, or a short slide deck, whichever fits the point. Match the product's colors, type, spacing, and components; use real labels and data; support desktop and mobile.
 
 Only screenshots and recordings of the real product are evidence: hard to fake, they prove behavior. Mermaid diagrams and HTML files are agent-authored explanations; they help the reader but prove nothing and can be wrong, so only the user's verdict validates them.
