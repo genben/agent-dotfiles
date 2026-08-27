@@ -5,7 +5,7 @@ description: Generate a PR description focused on why the change exists, its use
 
 # Generate PR description
 
-Write for readers who don't read code: the product owner deciding priorities, support triaging user reports, the writer compiling release notes. Lead with why the PR exists and what changes for users; keep code detail to a few lines. Reviewers (human or AI) read the diff itself, so never recite it: no inventories of changed files or functions. Mention a file or module only when it orients the reader (where the core of the change lives) or requires action (config, migration, public API).
+Write for readers who don't read code: the product owner deciding priorities, support triaging user reports, the writer compiling release notes. Lead with why the PR exists and what changes for users; keep code detail to a few lines. Reviewers (human or AI) read the diff itself, so never recite it: no inventories of changed files or functions. Mention a file or module only when it orients the reader (where the core of the change lives) or requires action (config, migration, public API). Apply the technical-writing skill to all prose.
 
 ## Workflow
 
