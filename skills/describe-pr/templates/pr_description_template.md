@@ -26,23 +26,22 @@ If nothing changes for users, write exactly "None." (only when true for the whol
 ## 🐛 Bug details
 
 <!-- Bug fixes only; delete this section otherwise. This section owns the failure mechanism; don't retell it in other sections.
-Severity: critical = data loss or security; high = broken workflow, no workaround; medium = workaround exists; low = cosmetic. Weigh impact together with likelihood: name the real code paths that can hit the trigger and how often they run; a severe outcome on a rare path is not automatically high.
+Severity: critical = data loss or security; high = broken workflow, no workaround; medium = workaround exists; low = cosmetic. Weigh impact together with likelihood: name the real code paths that can reach the failure and how often they run; a severe outcome on a rare path is not automatically high.
 Exposure: the commit or release that introduced the bug and when it shipped, traced through git history, so a customer can tell whether their version is affected. "As long as the code has done X" is a guess, not an answer. -->
 
 * **Severity**: critical | high | medium | low
 * **Symptom**: what users saw
-* **Trigger**: conditions that cause it
 * **Exposure**: how long it shipped; workaround, if any
 
 ---
 
-## 💥 Blast radius and risks
+## 💥 Impact
 
-<!-- What changes for users covers the what; this section covers the who and the how badly. -->
+<!-- What changes for users covers the what; this section covers who and when. Many bugs are dormant: they need a specific combination of settings, actions, and timing to surface, and many changes matter only to users with specific configurations. -->
 
-* **Blast radius**: affected user segments, scenarios, integrations
-* **Breaking changes**: what breaks; migration steps
-* **New risks**: failure modes this change can introduce; rollback story
+* **Who is affected**: user segments, deployment types, integrations, specific settings
+* **Who is not affected**: the setups a reader might worry about that are safe, with the reason they are safe
+* **Conditions**: the combination of settings, actions, and timing that must line up for the change to have any effect — precise enough that a reader can tell whether their deployment can hit it
 
 ---
 
