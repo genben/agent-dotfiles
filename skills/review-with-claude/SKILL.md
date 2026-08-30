@@ -10,7 +10,7 @@ Run the claude CLI as an adversarial reviewer of a diff. One session carries the
 ## Model and permissions
 
 - Pass `--permission-mode auto`: a classifier answers permission requests, so a headless run never stalls; a denied call just fails and the reviewer works around it. Never use `--dangerously-skip-permissions`. The classifier rate-limits when sessions start together ("auto mode cannot determine the safety of ..."); stagger parallel launches and re-message a reviewer that stalled on it.
-- The default model is fine; add `--model {alias-or-id}` when the user names one.
+- The default model is fine; add `--model {alias-or-id}` when the user names one. Prefer aliases over bare ids: `--model opus` resolves to the 1M-context build (`claude-opus-5[1m]`), while `--model opus-5` / `--model claude-opus-5` pins the 200k variant.
 - Set effort with `--effort {low|medium|high|xhigh|max}` on every call, `--resume` follow-ups included. An unrecognised level warns and falls back to the default instead of failing, so check the launch line.
 - The repo's CLAUDE.md loads automatically, so the reviewer already knows the repo's check commands; the brief only restricts, never re-teaches them.
 
