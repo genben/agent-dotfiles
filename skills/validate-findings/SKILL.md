@@ -7,6 +7,8 @@ description: Adversarially validate code-review findings against the code, rejec
 
 Reviewers are prompted to hunt, so they always return findings. A non-empty list is not evidence of real problems. The deliverable is an assessment, not fixes. Do not change code.
 
+A defect exists only relative to intent. Before ruling, infer the intended behavior from evidence: docstrings, naming, sibling idioms, commit history, domain semantics. No single source settles intent; unit tests can pin the wrong behavior, and comments or docstrings go stale, so corroborate across sources. Judge "is it real" against that intent, not the reviewer's assumption, and judge an intent-mismatch finding by whether the evidence supports the claimed intent, not by whether anything breaks today. Intent claims without evidence carry no weight, in either direction.
+
 Read the code each finding cites before ruling. Attack every finding on two independent axes and reject it if it fails either:
 
 1. **Is it real?** Reproduce or refute the claimed defect from the code. Does it occur as described?
