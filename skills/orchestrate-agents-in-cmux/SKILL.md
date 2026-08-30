@@ -7,6 +7,8 @@ description: Orchestrate persistent Claude Code, Codex, and Cursor sessions in c
 
 Give each unit of work its own cmux workspace and each agent its own interactive tab. Keep the sessions visible so the user can inspect and steer them.
 
+This skill owns cmux detection, session launch, identifiers, messaging, callbacks, supervision, and recovery. Calling skills own the delegated task, acceptance criteria, and result format. Keep those task rules out of this skill and keep cmux mechanics out of callers.
+
 ## Preconditions
 
 Run the bundled live-membership probe:
@@ -26,7 +28,7 @@ Use `CMUX_WORKSPACE_ID` and `CMUX_SURFACE_ID` as targeting hints when present, n
 - Give the agent a separate result path. Require it to persist the final result there before sending a short completion message with the path.
 - Record callback receipt and delivery evidence in the orchestrator's worklog; the child's result cannot report the outcome of a callback sent afterward.
 - Keep `SendMessage`, `codex queue`, and cmux-typed messages to file references, state changes, questions, and short check-ins. Put complex instructions, findings, and reports in files.
-- Unless the user chooses another location, keep briefs, addenda, worklogs, results, and handshake files in the current worktree under `docs/plans/{branch}/orchestration/`.
+- Unless the user chooses another location, keep briefs, addenda, worklogs, results, and handshake files under `~/.agents-orchestration/{repo}/{branch}/` (choose the appropriate files/dirs organization).
 
 ## Rules
 
@@ -51,7 +53,7 @@ For ordinary sends to Claude, run [scripts/claude_queue.py](scripts/claude_queue
 ## Workflow
 
 1. Create or select a workspace owned by this orchestration run.
-2. Create `docs/plans/{branch}/orchestration/` in the current worktree unless the user specified another directory.
+2. Resolve and create the artifact directory using the location rule above.
 3. Write each brief with the task, work plan, boundaries, acceptance checks, worklog path, result path, and callback contract. Tell an agent awaiting a follow-up to send a ready check-in and end its turn; never ask it to poll inside an active turn.
 4. Launch each agent in a dedicated tab. Record its Claude name and PID, Codex thread UUID, or Cursor chat UUID as applicable.
 5. Send short file pointers and check-ins through the harness transport. Put detailed follow-ups in an addendum file first.

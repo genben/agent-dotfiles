@@ -15,8 +15,7 @@ You manage subagents (analyst, implementer, reviewers, merger); you never do the
 - **Reject half-done work.** Name the unmet acceptance criterion in the redo message; never "try again".
 - **Take over a step** only after a subagent has failed the same criterion twice.
 - Launch independent subagents in parallel. Honor any user or memory instruction about the agent model.
-- Subagents run as their own `claude` session in a cmux tab inside cmux (per the `orchestrate-agents-in-cmux` skill), in-process through the Agent tool everywhere else. Briefs, acceptance criteria, and the redo policy are identical either way.
-- **Messages carry state and file pointers.** Put findings, evidence, and acceptance criteria in briefs, addenda, worklogs, and reports.
+- Run non-review workers as Claude Code sessions per `orchestrate-agents-in-cmux`. Run review phases through `code-review-arena`.
 
 ## Worktree ownership (every agent, every phase)
 
@@ -67,7 +66,7 @@ The file opens with a header block, the only part edited in place (it is the res
 
 ```markdown
 # split-pr progress — {branch}
-Base: {base}   Started: {date}   Mode: cmux | in-process   cmux group: {ref, cmux mode only}
+Base: {base}   Started: {date}   cmux group: {ref}
 Status: {phase and step}
 PR {#} {branch} | {worktree} | {cmux workspace + agent names} | state: pending | worktree-created | extracted | tests-green | pr-open | in-review (round N) | review-clean | merged
 Stays on the original branch: {sha — reason entangled, per line}
@@ -75,117 +74,33 @@ Stays on the original branch: {sha — reason entangled, per line}
 
 Record in the entries, as they happen: the approved grouping and cherry-pick order per PR, splits and what stays behind, conflicts, redo reasons, deliberate divergences the Phase 4 back-merge must expect, each finding as `id — author — agreed/unique — verdict — withdrawn/insisted — your decision`, checkpoint approvals, merge SHAs, and the back-merge result.
 
-## Running inside cmux
+## Cmux layout
 
-Detect the mode once, at the start of Phase 2, and record it in the progress file. Detection, workspace, tab, launch, messaging, and status mechanics live in the **`orchestrate-agents-in-cmux` skill**; follow it. Outside cmux, run subagents in-process.
+This workflow requires cmux. Run the precondition from `orchestrate-agents-in-cmux` before Phase 1 and stop if this process is outside cmux. That skill owns detection, workspace, tab, launch, messaging, supervision, and status mechanics.
 
 Split-pr specifics on top of that skill:
 
-- One group per split, named `split-pr: {branch}`; record the group and anchor refs in the progress file.
+- Before Phase 1, create one group named `split-pr: {branch}` and an `analysis` workspace for the analyst. Record the group, anchor, workspace, and analyst refs in the progress file.
 - One workspace per extracted PR, named after the PR branch only (cmux shows the PR link itself). Create the worktree yourself first (`git worktree add {worktree} -b {pr-branch} {base}`) so the workspace has a directory to open; the implementer starts at the init command. Record `workspace_ref` and the workspace UUID in the progress file.
-- One tab per subagent, named `implementer`, `reviewer`, `codex reviewer`, `merger`; the implementer rides the workspace's first tab. Agent names: `{pr-branch}-{role}`.
+- Use role-named tabs for the implementer and merger; the implementer rides the workspace's first tab. Reuse the PR workspace for the review tabs selected by `code-review-arena`. Agent names use `{pr-branch}-{role}`.
 - Briefs live under `docs/plans/{branch}/split-pr/briefs/`; every brief requires the report at `docs/plans/{branch}/split-pr/{pr-branch}.{role}.md` in the original worktree: PR URL, commits, file list, lint result, test command with exit code and output tail, findings. Verify from that report and your own `gh pr diff --name-only` and `gh pr view`.
 - Status lanes: `todo` while queued, `working` while extracting, testing, or fixing, `review` during review rounds, `needs-attention` only for "stopped until a human acts", `done` once merged.
 
 ## Supervising the agents
 
-Check every running agent at least every five minutes. In-process subagents notify you; supervise tab sessions per the `orchestrate-agents-in-cmux` skill. Record every intervention and restart in the progress file; a restarted agent's brief states what's done (from the progress file and worktree git state) and what remains.
+Supervise tab sessions per `orchestrate-agents-in-cmux`. Record every intervention and restart in the progress file. A recovery brief states verified completed work and what remains.
 
-## Adversarial review with two reviewers
+## Review extracted PRs
 
-Every extracted PR is reviewed twice, independently: a **claude reviewer** and a **codex reviewer**. Neither may read the other's findings before writing its own; cross-validation is the only channel between them. Then dedupe, cross-validate, take rebuttals, adjudicate.
+Run `code-review-arena` on each extracted PR with Claude Opus and Codex. Store its briefs, worklogs, results, validation, and rebuttal files under `docs/plans/{branch}/split-pr/`.
 
-`{plan-dir}` is `docs/plans/{branch}/split-pr/`; every file this protocol produces lives there. If `codex` isn't on PATH, tell the human, record it, and continue with the claude reviewer alone.
+Add these split-specific review dimensions:
 
-### Shared findings format
+- context lost because a cherry-picked change depended on feature-branch code;
+- test quality against the repository standards;
+- scope outside the approved extraction group.
 
-Both reviewers write plain Markdown, one `##` block per finding, to `{plan-dir}/{pr-branch}.claude-review.md` and `{plan-dir}/{pr-branch}.codex-review.md`:
-
-```markdown
-## claude-3 — Export query drops the tenant filter
-- severity: high
-- category: correctness
-- file: miarecweb/views/export.py:142
-- evidence: `uv run pytest miarecweb/tests/functional_tests/test_export.py::test_scope` fails on this branch and passes on {base}
-- detail: …
-- suggested fix: …
-```
-
-Later stages refer to findings by id (`claude-N`, `codex-N`). Omit fields that don't apply.
-
-Judge a report by its ids, evidence, and actionability; queue a correction when it falls short.
-
-### Running the two reviewers
-
-Launch both at once, per PR, on the same brief: review `git diff {base}...{pr-branch}` for correctness, context dropped by a cherry-pick that silently depended on branch-only code, test quality against the repo's testing standards, and scope creep. They hunt for problems, not bless the work.
-
-Reviewers may run the suite, linters, type checker, any check in the repo's CLAUDE.md, and throwaway probes. Neither may change the PR: no edits to tracked files, no commits, no pushes; state that in the brief.
-
-Give every brief a shared preamble (allowed commands, prohibitions, review dimensions, id prefix) and a per-PR section naming what to attack in that diff. A generic brief returns generic findings.
-
-- **claude reviewer**: in cmux, a new tab named `reviewer`; otherwise an in-process subagent. Writes `{plan-dir}/{pr-branch}.claude-review.md`.
-- **codex reviewer**: run it per the review-with-codex skill; one session carries review, validation, and rebuttal. In cmux, use the interactive TUI in a new tab named `codex reviewer`; outside cmux, use the non-interactive form in the background. Report: `{plan-dir}/{pr-branch}.codex-review.md`; brief: `{plan-dir}/briefs/{pr-branch}.codex-review.md`; thread handshake: `{plan-dir}/briefs/{pr-branch}.codex-thread-id`. Record the thread id in the progress file.
-
-### Dedupe
-
-When both findings files exist, dispatch a **dedup subagent** (in-process) with both files: match findings, never judge them. Two findings are the same when they name the same defect at the same place, however worded; two defects in one file are not duplicates. It writes `{plan-dir}/{pr-branch}.dedup.md`:
-
-```markdown
-## agreed
-- claude-1 = codex-3 — Export query drops the tenant filter
-
-## unique to claude
-- claude-2 — Replacement test asserts on the mock, not the database
-
-## unique to codex
-- codex-1 — Migration lacks a downgrade path
-```
-
-### Cross-validation
-
-Each reviewer judges the other's unique findings, accept or reject. A validator may run the same checks the reviewers ran; reproducing, or failing to reproduce, a defect is the strongest evidence.
-
-Instruct the validator to follow the validate-findings skill: reject any finding that is not real or does not matter.
-
-```markdown
-## codex-2 — reject
-- reason: the guard it claims is missing runs in the decorator two frames up
-- evidence: `rg "require_tenant" miarecweb/views/export.py` and the passing test it points at
-```
-
-- **codex validates `unique to claude`**: write an addendum that requires `{plan-dir}/{pr-branch}.codex-validation.md`, wait for the Codex session to end its turn, then queue only the addendum path into the same thread. Outside cmux, use a fresh `codex exec` with `-o` at that path.
-- **claude validates `unique to codex`**: write an addendum that requires `{plan-dir}/{pr-branch}.claude-validation.md`, then send only its path to the same Claude reviewer session.
-
-### Rebuttal
-
-Send every rejection back to the finding's author, which withdraws or insists:
-
-```markdown
-## claude-3 — insist
-- argument: the decorator it names runs only on the HTML view; the export endpoint is registered separately
-```
-
-- **claude author**: write the rejections to an addendum, then send only its path to the same reviewer session; it writes `{pr-branch}.claude-rebuttal.md`.
-- **codex author**: write the rejections to an addendum, then queue only its path into the idle Codex session; it writes `{pr-branch}.codex-rebuttal.md`. Outside cmux, use a fresh `codex exec` whose brief points to the original findings and rejections.
-
-### Adjudicate
-
-Decide on the evidence, not by counting votes:
-
-- **Agreed by both**: route to the implementer.
-- **Unique, accepted by the other reviewer**: route to the implementer.
-- **Unique, rejected, then withdrawn**: drop; record it was raised and withdrawn.
-- **Unique, rejected, then insisted**: read the code yourself and settle it. If it stays unsettled, keep it; the implementer fixes it or explains in writing why it isn't a defect.
-
-**You own the quality of the outcome, and quality includes what does NOT get written.** Acceptance is necessary to route a finding, never sufficient; re-apply the validate-findings gates yourself before anything reaches the implementer:
-
-- A finding becomes a fix only when it names a production entry point and an input that reaches the defect today. A probe that constructs the failing input proves the defect real, not important; document-or-drop.
-- Reviewers always return something. For a low-severity finding, ask what breaks for a real user if it ships unfixed; when the answer is nothing, drop it and record why.
-- Rounds drift theoretical: when a round's survivors are only pathological-input polish, end the loop. Two clean-enough rounds beat five rounds of hardening nobody asked for.
-
-Record the trail for every finding in the progress file, then send the implementer one consolidated list. After it reports back, rerun the protocol on the new diff. The loop ends on a round where nothing survives adjudication.
-
-State the production-path bar in every reviewer brief so reviewers self-filter: a finding names the production entry point and the input that reaches the defect, or labels itself theoretical.
+Route surviving findings to the same implementer, then rerun the arena on the updated diff. Record each finding's verdict and every review round in the progress file. Stop when no finding survives adjudication.
 
 ## Phase 1: Analyze and propose
 
@@ -203,7 +118,7 @@ Write the proposal into the progress file, then **present it to the human**: gro
 
 ## Phase 2: Extract, verify, review (parallel per PR)
 
-Detect the environment first and record the mode. In cmux mode, create the group before the first PR; per PR, create the worktree and workspace yourself, launch the implementer in the workspace's first tab, and record the worktree creation in the progress file.
+For each PR, create the worktree and workspace, launch the implementer in the workspace's first tab, and record the worktree creation in the progress file.
 
 For each approved group, dispatch an **implementer subagent** with this pipeline (all implementers in parallel, each in its own worktree):
 
@@ -223,11 +138,11 @@ Keep workspace status in step with the pipeline: `working` from step 1, `needs-a
 - Commits preserved individually (no squashing during extraction), messages intact.
 - **A behavior fix is pinned by a test that fails without it.** The implementer proves it: temporarily revert the fix, show the new test fails, restore, report the evidence; never commit the revert. Exercise the production entry point end to end, not the source of a value.
 
-Then run "Adversarial review with two reviewers" on each PR. Route what survives adjudication back to the same implementer and repeat on the new diff. Record each round in the progress file.
+Then run "Review extracted PRs" on each PR.
 
 When all PRs are review-clean, update the progress file and **report to the human**: one line per PR (URL, scope, test result, review rounds) plus anything that deviated from the approved plan.
 
-**Checkpoint 2: stop. The human reviews the PRs and approves the merge set.** In cmux mode, set every PR workspace to `needs-attention`.
+**Checkpoint 2: stop. The human reviews the PRs and approves the merge set.** Set every PR workspace to `needs-attention`.
 
 ## Phase 3: Merge serially
 
@@ -235,17 +150,17 @@ Merge the approved PRs one at a time, in the approved dependency order:
 
 - `gh pr merge <n> --merge`: **merge commit, never squash** (preserved commits let the back-merge resolve cherry-picks as identical). **No `--delete-branch`.**
 - After each merge, check the next PR still merges cleanly (`gh pr view <n> --json mergeable`). If not, dispatch a **merger subagent** to update that PR's branch on the new base, resolve conflicts, rerun the full suite, and push; verify green before merging.
-- Record each merge commit SHA in the progress file. In cmux mode, set that PR's workspace to `done`.
+- Record each merge commit SHA in the progress file. Set that PR's workspace to `done`.
 
 ## Phase 4: Back-merge and denoise
 
-Dispatch a **merger subagent** in the original worktree (in cmux mode, a new tab named `merger` in the last PR's workspace, since this skill never touches the feature branch's own workspace):
+Dispatch a **merger subagent** in the original worktree. Use a new tab named `merger` in the last PR's workspace because this skill never touches the feature branch's own workspace.
 
 1. Merge the updated base into the feature branch (`git merge {base}`) and resolve conflicts. Cherry-picked commits should resolve as identical; investigate anything that doesn't, since it usually means an extraction diverged from the branch version.
 2. Run the full test suite; fix legitimate fallout.
 3. Push.
 
-Then dispatch an **adversarial reviewer** on the reduced diff (`{base}...HEAD`): the final pre-merge review of the feature PR itself.
+Then run `code-review-arena` on the reduced diff (`{base}...HEAD`) as the final pre-merge review of the feature PR.
 
 **Denoise the PR description too**: rerun the describe-pr skill against the reduced diff and update the description with `gh pr edit`, linking the extracted PRs where that adds context. If the repo keeps PR description files (for example `docs/prs/`), regenerate the original PR's file and commit it.
 
