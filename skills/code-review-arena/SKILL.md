@@ -1,23 +1,25 @@
 ---
 name: code-review-arena
-description: Review a PR, a diff, or uncommitted changes with four independent reviewers on different harnesses and models, cross-judge the merged findings, and arbitrate the final verdict as the orchestrator. Use when asked to run a review arena, arena-review a PR, branch, or working tree, or review with multiple models or reviewers.
+description: Review a PR, a diff, or uncommitted changes with multiple independent reviewers on different harnesses and models, cross-judge the merged findings, and arbitrate the final verdict as the orchestrator. Use when asked to run a review arena, arena-review a PR, branch, or working tree, or review with multiple models or reviewers.
 ---
 
 # Code review arena
 
-Review one target with four independent reviewers on different harnesses and models, merge their findings, cross-judge them, and arbitrate the verdict yourself. The deliverable is a validated findings report with routing, not fixes; nobody edits the code under review during the arena.
+Review one target with independent reviewers on different harnesses and models, merge their findings, cross-judge them, and arbitrate the verdict yourself. The deliverable is a validated findings report with routing, not fixes; nobody edits the code under review during the arena.
 
 ## Roster
 
 | Id prefix | Harness | Model | Effort | Launch per |
 |---|---|---|---|---|
-| `claude-fable-N` | claude | fable-5 | high | review-with-claude |
 | `claude-opus-N` | claude | opus-5 | xhigh | review-with-claude |
 | `codex-N` | codex | gpt-5.6 sol | xhigh | review-with-codex |
 | `cursor-N` | cursor | grok-4.6 | xhigh | review-with-cursor |
+| `claude-fable-N` | claude | fable-5 | high | review-with-claude |
 
+- Use Fable model only when user explicitely requested it. Otherwise, run only 3 reviewers (opus, codex, cursor).
+
+- Pass effort explicitly, since a missing flag silently means default: `claude --effort xhigh`, `codex -c model_reasoning_effort=xhigh`, cursor in the model id.
 - One cmux workspace for the review, one tab per reviewer (cmux skill). Outside cmux, use each skill's headless background form.
-- Pass model and effort in the form each harness accepts (cursor encodes effort in the model id; codex and claude take flags or config).
 
 ## Frame
 
@@ -38,18 +40,18 @@ Blind rule: no reviewer sees another's findings until its own report is written;
 
 ## Collect and merge
 
-Supervise per the cmux skill; verify from report files, never from screens or prose. When all four reports exist:
+Supervise per the cmux skill; verify from report files, never from screens or prose. When every report exists:
 
-- Merge findings that share a root cause and keep every originating id (`found-by: claude-opus-2, cursor-5`). Convergence raises confidence, but reject nothing for being unique; a unique catch is why the fourth model is there.
+- Merge findings that share a root cause and keep every originating id (`found-by: claude-opus-2, cursor-5`). Convergence raises confidence, but reject nothing for being unique; a unique catch is why the third harness is there.
 - Drop nothing yet. The merged doc is the cross-judge input.
 
 ## Cross-judge
 
 Validation is a follow-up into two still-open reviewer sessions, each told to follow the validate-findings skill (installed under `~/.agents/skills`, readable by every harness):
 
-- The codex session (gpt 5.6 sol) validates the two claude reviewers' findings.
-- The opus-5 session validates the codex and cursor findings.
-- No session validates its own findings. Never use fable for validation: the final judge already runs on it, and a validator should be cheaper and sit in a different seat.
+- The codex session validates the claude and cursor findings.
+- The claude opus-5 session validates the codex findings.
+- No session validates its own findings; fable never validates.
 - Send each rejection to the originating session for one rebuttal, then close the debate.
 
 ## Final judgement
