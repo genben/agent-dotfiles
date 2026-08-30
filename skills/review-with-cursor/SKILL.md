@@ -1,6 +1,6 @@
 ---
 name: review-with-cursor
-description: Run the cursor CLI (agent) as an independent code reviewer on a diff, drive one chat through review, validation, and rebuttal, and collect findings from a report file. Use when asked to review with cursor, run cursor or grok as a second reviewer, or send findings to cursor for validation.
+description: Run the cursor CLI (agent) as an independent code reviewer on a diff, drive one chat through review, validation, and rebuttal, and collect findings from a report file. Use when asked to review with cursor, run cursor or kimi as a second reviewer, or send findings to cursor for validation.
 ---
 
 # Review with cursor
@@ -9,7 +9,7 @@ Run the cursor CLI as an adversarial reviewer of a diff. One chat carries the wh
 
 ## Model and permissions
 
-- Default model: `--model cursor-grok-4.6-xhigh`. Verify the id with `agent --list-models` if the run rejects it.
+- Default model: `--model kimi-k3-max`. Verify the id with `agent --list-models` if the run rejects it.
 - Pass `--auto-review` to use a classifier to automatically approve every tool call when running interactively in cmux tab. For in print mode, pass `--force` (yolo mode).
 
 ## The brief
@@ -27,13 +27,13 @@ chat=$(agent create-chat)   # record this id
 Interactive TUI, in a terminal you keep open (a cmux or tmux tab, per the cmux skill); the session stays alive for follow-ups:
 
 ```bash
-agent --resume="$chat" --model cursor-grok-4.6-xhigh --force "$(cat {brief-path})"
+agent --resume="$chat" --model kimi-k3-max --auto-review "$(cat {brief-path})"
 ```
 
 Non-interactive, in the background (a long review takes minutes). Each `-p` call blocks until the turn finishes and prints the final message to stdout, so redirect stdout to the report path:
 
 ```bash
-agent -p --resume="$chat" --model cursor-grok-4.6-xhigh --force \
+agent -p --resume="$chat" --model kimi-k3-max --force \
   "$(cat {brief-path})" > {report-path}
 ```
 
@@ -47,7 +47,7 @@ Conversation state lives server-side, keyed by the chat id; `~/.cursor/chats/<cw
 - **Headless**: send each follow-up as another `-p` call on the same chat id; context persists across turns:
 
   ```bash
-  agent -p --resume="$chat" --model cursor-grok-4.6-xhigh --force "{message}" > {reply-path}
+  agent -p --resume="$chat" --model kimi-k3-max --force "{message}" > {reply-path}
   ```
 
 Turns are strictly request/response in both forms: there is no queue and no mid-turn steering. Wait for the current turn to finish before sending the next; a steering message becomes the next turn's prompt.
