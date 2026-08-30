@@ -11,7 +11,7 @@ Review one target with independent reviewers on different harnesses and models, 
 
 | Id prefix | Harness | Model | Effort | Launch per |
 |---|---|---|---|---|
-| `claude-opus-N` | claude | opus-5 | xhigh | review-with-claude |
+| `claude-opus-N` | claude | opus (`--model opus`) | xhigh | review-with-claude |
 | `codex-N` | codex | gpt-5.6 sol | xhigh | review-with-codex |
 | `cursor-N` | cursor | kimi-k3 | max | review-with-cursor |
 | `claude-fable-N` | claude | fable-5 | high | review-with-claude |
@@ -19,6 +19,7 @@ Review one target with independent reviewers on different harnesses and models, 
 - Use Fable model only when user explicitely requested it. Otherwise, run only 3 reviewers (opus, codex, cursor).
 
 - Pass effort explicitly, since a missing flag silently means default: `claude --effort xhigh`, `codex -c model_reasoning_effort=xhigh`, cursor in the model id.
+- For claude reviewers pass the `opus` alias, never a bare id: `--model opus` resolves to the 1M-context build (`claude-opus-5[1m]`), while `--model opus-5` or `--model claude-opus-5` pins the 200k variant.
 - One cmux workspace for the review, one tab per reviewer (cmux skill). Outside cmux, use each skill's headless background form.
 
 ## Frame
