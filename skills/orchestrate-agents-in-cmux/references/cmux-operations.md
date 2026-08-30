@@ -8,7 +8,6 @@ When one task spans several workspaces, create a group and leave its anchor work
 
 ```bash
 cmux workspace-group create --name "{task}" --json
-cmux workspace-group move workspace_group:N --to-index 999
 ```
 
 Create one workspace per worktree or independent unit:
@@ -20,15 +19,7 @@ cmux workspace create --name "{name}" --cwd "{dir}" --focus false \
 
 Record the returned `workspace_ref` and the workspace UUID from `cmux workspace list --json`. The UUID survives an app restart. The workspace's `--cwd` applies only to its first tab; pass `--working-directory` for later tabs.
 
-Create the first agent atomically with its workspace when practical:
-
-```bash
-cmux workspace create --name "{name}" --cwd "{dir}" --focus false \
-  --group workspace_group:N --group-placement end --json \
-  --layout '{"pane":{"surfaces":[{"type":"terminal","command":"{agent command}"}]}}'
-```
-
-Create later agent tabs one mutation at a time:
+Create agent tabs one mutation at a time. Keeping the launch command out of layout JSON avoids nested quoting errors:
 
 ```bash
 cmux new-surface --type terminal --workspace {workspace_ref} \
@@ -52,18 +43,19 @@ claude --name {unique-name} --model {model} --effort {level} --permission-mode a
 Codex:
 
 ```bash
-codex --approve-for-me "Read {brief-path} and follow it. Start with a tool call, not a reply."
+codex {permission-options} "Read {brief-path} and follow it. Start with a tool call, not a reply."
 ```
+
+Choose permission and sandbox options that permit the required handshake, worklog, and result writes without granting broader autonomy than the assignment needs. For a source-review-only task, prohibit source edits in the brief and limit authorized writes to its orchestration directory.
 
 Cursor:
 
 ```bash
-chat=$(agent create-chat)
-agent --resume="$chat" --model kimi-k3-max --auto-review \
+agent --resume="{recorded-chat-uuid}" --model {model} --auto-review \
   "Read {brief-path} and follow it. Start with a tool call, not a reply."
 ```
 
-Record the Cursor chat UUID before launch. The brief must name absolute worklog and result paths because a TUI has no redirected stdout. Never run concurrent `agent -p` calls against its open TUI chat.
+Run `agent create-chat` in the orchestrator's own shell first and record the returned UUID before typing the launch command into the target tab. Verify the selected model with `agent models`. The brief must name absolute worklog and result paths because a TUI has no redirected stdout. Never run concurrent `agent -p` calls against its open TUI chat.
 
 ## Confirm startup
 
@@ -73,20 +65,17 @@ cmux read-screen --workspace {workspace_ref} --surface {surface_ref} --lines 20
 
 If the screen visibly shows a first-launch trust prompt with its accept option selected, send Enter and inspect again. Never send Enter speculatively; another dialog may be waiting.
 
-## Status and checklist
+## Status
 
-Set status and checklists only on workspaces created by this run:
+Set status only on workspaces created by this run:
 
 ```bash
 cmux workspace status set <todo|working|review|needs-attention|done> --workspace {workspace_ref}
-cmux todo set '[{"text":"…","state":"pending"},{"text":"…","state":"in-progress"}]' --workspace {workspace_ref}
-cmux todo start <n> --workspace {workspace_ref}
-cmux todo check <n> --workspace {workspace_ref}
 ```
 
-Checklist item states are `pending`, `in-progress`, and `completed`; workspace statuses use a different vocabulary. Advance items when stages change so the sidebar remains a live view. Use `needs-attention` only when work is stopped pending a human action.
+Status overrides may auto-clear when cmux infers a different state. Use `needs-attention` only when work is stopped pending a human action. Do not manage `cmux todo`; that checklist belongs to the user unless the user explicitly asks the agent to update it.
 
-Use descriptions only for state the checklist cannot express, then clear them:
+Use descriptions only for state the workspace status cannot express, then clear them:
 
 ```bash
 cmux workspace-action --action set-description --description "{one line}" --workspace {workspace_ref}
@@ -97,23 +86,22 @@ cmux workspace-action --action clear-description --workspace {workspace_ref}
 
 At least every five minutes, check each working agent:
 
-1. Confirm the process or registered session is alive.
-2. Compare the worklog mtime and size with the previous check; check whether the separate result file exists.
-3. Compare relevant repository state with the previous check.
-4. Ask for state when the agent is idle without a result file.
-5. If a busy agent is unchanged across two checks, send a progress request. If it reports a hung command, tell it to interrupt and retry.
-6. If the session is gone, open a new `{role} (2)` tab with a recovery brief describing verified completed work and remaining work.
+1. Compare the worklog mtime and size with the previous check; check whether the separate result file exists.
+2. Compare relevant repository state with the previous check.
+3. Ask for state when the agent is idle without a result file.
+4. If a busy agent is unchanged across two checks, inspect its recorded surface and send a progress request. Repeated self-polling or repeated waiting is not progress. If it reports a hung command, tell it to interrupt and retry.
+5. If the terminal visibly exited or the surface is unreachable and no other signal shows progress, open a new `{role} (2)` tab with a recovery brief describing verified completed work and remaining work.
 
-For Claude, inspect native peer status, worklog, and result. For Codex, inspect its process, thread callback, worklog, and result. For Cursor, inspect its process, chat cache timestamp, worklog, and result. An empty Cursor result after process exit means it died before reporting.
+For Claude, inspect native peer status, worklog, and result. For Codex, inspect thread callbacks, worklog, and result. For Cursor, inspect the recorded chat UUID, worklog, and result. Use `cmux read-screen` to diagnose a stalled tab. `cmux surface-health` returning `in_window=false` does not prove the terminal is dead.
 
-Interrupt a stuck terminal with `cmux send-key ... Escape`; `C-c` is not a valid key name.
+Interrupt a visibly stuck terminal with `cmux send-key ... Escape`; `C-c` is not a valid key name. After interrupting Codex, wait for a visible `Ready` prompt. If queued messages do not start, type the addendum pointer through cmux and press Enter instead of trusting the old queue.
 
 ## After a cmux restart
 
-Surviving tabs may be detached dead terminals. If `read-screen` fails, run:
+Surviving tabs may be detached dead terminals. If `read-screen` fails, `surface-health` can provide supplementary placement information:
 
 ```bash
 cmux surface-health --workspace {workspace_ref}
 ```
 
-When every surface reports `in_window=false`, leave the dead tabs and relaunch agents in new tabs. Refresh Claude names and all callback identifiers after relaunch.
+Do not infer death from `in_window=false`; live TUI tabs can report it. Relaunch only when the recorded surface is unreachable or visibly exited and callbacks, worklogs, and results show no continuing progress. Leave the old tab in place and refresh the relaunched agent's identifiers.

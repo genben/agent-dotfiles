@@ -48,12 +48,12 @@ Supervise per the `orchestrate-agents-in-cmux` skill; verify from report files, 
 
 ## Cross-judge
 
-Validation is a follow-up into two still-open reviewer sessions, each told to follow the validate-findings skill (installed under `~/.agents/skills`, readable by every harness):
+Write each validation assignment to an addendum file, then send only its absolute path into the still-open reviewer session. Each addendum tells the reviewer to follow the validate-findings skill (installed under `~/.agents/skills`, readable by every harness):
 
 - The codex session validates the claude and cursor findings.
 - The claude opus-5 session validates the codex findings.
 - No session validates its own findings; fable never validates.
-- Send each rejection to the originating session for one rebuttal, then close the debate.
+- Write each rejection set to a rebuttal addendum and send only its path to the originating session. Allow one rebuttal, then close the debate.
 
 ## Final judgement
 

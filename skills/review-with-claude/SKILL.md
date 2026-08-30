@@ -36,7 +36,7 @@ Non-interactive, in the background (a long review takes minutes); choose the ses
 ```bash
 session=$(uuidgen | tr 'A-Z' 'a-z')   # record this id
 claude -p --session-id "$session" --model {model} --effort {level} --permission-mode auto \
-  "$(cat {brief-path})" > {report-path}
+  "Read {brief-path} and follow it." > {report-path}
 ```
 
 Headless `-p` never shows the trust dialog; the interactive form can stop on one in an unfamiliar directory (see the `orchestrate-agents-in-cmux` skill).
@@ -45,12 +45,13 @@ Sessions are stored per directory (`~/.claude/projects/{cwd, slashes as dashes}/
 
 ## Follow-ups
 
-- **Interactive session, orchestrator is a Claude Code session**: find the exact `--name` in `ListAgents` and send follow-ups with `SendMessage(to: "{name}", notify_when_idle: true)`; the session keeps its context across review, validation, and rebuttal.
-- **Interactive session, any other orchestrator**: type the follow-up into the tab (`cmux send` + `send-key Enter`); read results from the report files the briefs name.
+- **Interactive session, orchestrator is a Claude Code session**: write each detailed follow-up to an addendum file, then send only its absolute path with `SendMessage(to: "{name}", notify_when_idle: true)`.
+- **Interactive session, another orchestrator in cmux**: use the transport selected by `orchestrate-agents-in-cmux`; type into the tab only for documented recovery. Messages carry only state and absolute file paths.
 - **Headless**: send each follow-up as another `-p` call resuming the same session; context persists across turns:
 
   ```bash
-  claude -p --resume "$session" --effort {level} --permission-mode auto "{message}" > {reply-path}
+  claude -p --resume "$session" --effort {level} --permission-mode auto \
+    "Read {addendum-path} and follow it." > {reply-path}
   ```
 
   Turns are strictly request/response: wait for the current call to exit before sending the next. Don't pass `--fork-session`; a fork answers from the history but stops sharing a session with later follow-ups.

@@ -9,7 +9,7 @@ Run the cursor CLI as an adversarial reviewer of a diff. One chat carries the wh
 
 ## Model and permissions
 
-- Default model: `--model kimi-k3-max`. Verify the id with `agent --list-models` if the run rejects it.
+- Default model: `--model kimi-k3-max`. Verify the id with `agent models` before launch.
 - Pass `--auto-review` to use a classifier to automatically approve every tool call when running interactively in cmux tab. For in print mode, pass `--force` (yolo mode).
 
 ## The brief
@@ -27,14 +27,15 @@ chat=$(agent create-chat)   # record this id
 Interactive TUI, in a terminal you keep open (a cmux or tmux tab, per the `orchestrate-agents-in-cmux` skill); the session stays alive for follow-ups:
 
 ```bash
-agent --resume="$chat" --model kimi-k3-max --auto-review "$(cat {brief-path})"
+agent --resume="$chat" --model kimi-k3-max --auto-review \
+  "Read {brief-path} and follow it."
 ```
 
 Non-interactive, in the background (a long review takes minutes). Each `-p` call blocks until the turn finishes and prints the final message to stdout, so redirect stdout to the report path:
 
 ```bash
 agent -p --resume="$chat" --model kimi-k3-max --force \
-  "$(cat {brief-path})" > {report-path}
+  "Read {brief-path} and follow it." > {report-path}
 ```
 
 Headless `-p` never prompts for trust; the TUI can stop on a trust prompt in an unfamiliar workspace (add `--trust`, or clear it per the `orchestrate-agents-in-cmux` skill).
@@ -43,14 +44,15 @@ Conversation state lives server-side, keyed by the chat id; `~/.cursor/chats/<cw
 
 ## Follow-ups
 
-- **TUI session**: type the follow-up into the tab (`cmux send` + `send-key Enter`); read results from the report files the briefs name. Never mix concurrent `-p` calls into a chat a TUI has open.
+- **TUI session**: write the detailed follow-up to an addendum file, then type only `Read {addendum-path} and follow it.` into the tab with `cmux send` plus Enter. Cursor queues typed input as the next turn when busy; it does not steer the active turn. Never mix concurrent `-p` calls into a chat a TUI has open.
 - **Headless**: send each follow-up as another `-p` call on the same chat id; context persists across turns:
 
   ```bash
-  agent -p --resume="$chat" --model kimi-k3-max --force "{message}" > {reply-path}
+  agent -p --resume="$chat" --model kimi-k3-max --force \
+    "Read {addendum-path} and follow it." > {reply-path}
   ```
 
-Turns are strictly request/response in both forms: there is no queue and no mid-turn steering. Wait for the current turn to finish before sending the next; a steering message becomes the next turn's prompt.
+Turns are strictly request/response: there is no mid-turn steering. A typed TUI follow-up becomes the next turn; a headless follow-up waits for the current process to exit.
 
 ## Monitoring
 

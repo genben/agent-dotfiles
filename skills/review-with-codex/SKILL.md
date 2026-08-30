@@ -22,7 +22,7 @@ Keep the brief in a file; a generic brief returns generic findings. It must:
 - Allow running the suite, linters, type checker, any check in the repo's CLAUDE.md, and throwaway probes. Prohibit changing the code under review: no edits to tracked files, no commits, no pushes.
 - State the production-path bar so codex self-filters: a finding names the production entry point and the input that reaches the defect, or labels itself theoretical.
 - Name the absolute report path and the findings format, and make the report the final message (so `codex exec -o` captures it).
-- Open with a unique marker line (for example `{task} {branch} codex-reviewer`) used to resolve the thread id later.
+- For an interactive run, name an absolute thread-handshake file and require Codex to write `CODEX_THREAD_ID` there immediately after reading the brief.
 
 Findings format, one `##` block per finding so later stages can refer to `codex-N` by id; omit fields that don't apply:
 
@@ -43,7 +43,8 @@ Judge the report by its ids, evidence, and actionability; queue a correction whe
 Interactive TUI, in a terminal you keep open (a cmux or tmux tab); the session stays alive for follow-ups:
 
 ```bash
-codex --approve-for-me -c model_reasoning_effort=xhigh "$(cat {brief-path})"
+codex -c model_reasoning_effort=xhigh \
+  "Read {brief-path} and follow it. Start with a tool call, not a reply."
 ```
 
 Non-interactive, in the background. Pass the brief **on stdin**; `-o` captures the final message as the report:
@@ -52,35 +53,22 @@ Non-interactive, in the background. Pass the brief **on stdin**; `-o` captures t
 codex exec -o {report-path} -c model_reasoning_effort=xhigh - < {brief-path} > {log-path} 2>&1
 ```
 
-A worktree-isolated harness refuses `"$(cat …)"`, and a backgrounded `codex exec` without stdin redirection hangs. Keep the log: `-o` writes nothing when a turn dies.
+A backgrounded `codex exec` without stdin redirection hangs. Keep the log: `-o` writes nothing when a turn dies.
 
 `codex exec` answers once and exits, so each follow-up is a fresh `codex exec` whose prompt carries the prior context (for a rebuttal: its original findings plus the rejections).
 
 ## Addressing the interactive session
 
-- Interactive codex has no `--name`. Resolve the thread id from the brief's marker line once the session starts; match the marker, never "the newest thread". Record the id. Run the queries below as written; `thread_items` and `thread_turns` are the only tables, with the columns shown.
-
-  ```bash
-  sqlite3 ~/.codex/thread_history_1.sqlite \
-    "select thread_id from thread_items where item_type='userMessage'
-      and item_json like '%{marker}%' order by created_at_ms desc limit 1;"
-  ```
-
-- Send follow-ups with `codex queue --thread {thread-id} --message "…"`; the session keeps its context across review, validation, and rebuttal.
-- Read the session's last message without the screen:
-
-  ```bash
-  sqlite3 ~/.codex/thread_history_1.sqlite \
-    "select item_json from thread_items where thread_id='{thread-id}'
-      and item_type='agentMessage' order by rollout_ordinal desc limit 1;"
-  ```
+- Wait for the non-empty thread-handshake file and record its UUID. Do not scrape Codex's database.
+- Put every detailed follow-up in an addendum file. Require Codex to end its current turn, then send only the absolute addendum path with `codex queue --thread {thread-id} --message "Read {addendum-path}."`.
+- Read responses from the named report files. Record callback receipt in the orchestrator worklog.
+- If `codex queue` cannot update `~/.codex/state_*.sqlite`, retry from a context permitted to update Codex state. After interrupting a turn, use cmux typing as described by `orchestrate-agents-in-cmux`.
 
 ## Monitoring
 
-A codex session is not a peer agent session (it never appears in `ListAgents`); check three signals:
+A codex session is not a peer agent session (it never appears in `ListAgents`); check two signals:
 
 - Process: `pgrep -f codex`.
-- Thread progress: `sqlite3 ~/.codex/thread_history_1.sqlite "select max(completed_at) from thread_turns where thread_id='{thread-id}';"`.
 - The report file's mtime.
 
 An interactive session stays alive after answering; queue more work into it. A codex tab back at a shell prompt has exited; a finished run with no report died. Read its output before relaunching.
