@@ -10,15 +10,19 @@ Run each subagent as an interactive session in its own cmux tab, grouped into on
 ## Detect the mode
 
 ```bash
-[ -n "$CMUX_WORKSPACE_ID" ] && command -v cmux >/dev/null 2>&1 && echo "cmux mode"
+echo "$CMUX_WORKSPACE_ID"
+command -v cmux
 ```
 
-Outside cmux, skip every `cmux` command and run subagents in-process through the Agent tool; briefs, acceptance criteria, and redo policy stay identical either way.
+Both non-empty means cmux mode. Keep the two commands separate: a worktree-isolated session refuses the chained form, and the refusal looks like cmux is missing.
+
+Outside cmux, skip every `cmux` command and run subagents in-process through the Agent tool; briefs, acceptance criteria, and redo policy stay identical, except that an in-process subagent cannot write a report file.
 
 ## Rules
 
 - Only you, the orchestrator, call `cmux`; subagents never do.
-- One cmux mutation at a time (concurrent ones corrupt the sidebar layout): wait for its `OK`, prefer the atomic forms (`workspace create --layout`, `todo set`).
+- One cmux mutation at a time (concurrent ones corrupt the sidebar layout): wait for its `OK`, prefer the atomic forms (`workspace create --layout`, `todo set`). One `cmux` call per Bash call: a worktree-isolated session refuses chained commands, and a broken `&&` chain leaves the sidebar half-updated.
+- Address by ref (`workspace:64`, `surface:183`), never by bare number, and never from a loop variable holding more than one field.
 - Never take focus: pass `--focus false`; never run `workspace select`, `focus-pane`, or `focus-panel`.
 - Never close a workspace or a tab, never terminate an agent, finished or not. To rerun an agent, open a **new** tab named `{role} (2)`, and so on.
 - Never reorder existing workspaces or groups; everything you create goes to the bottom of the sidebar.
@@ -74,10 +78,11 @@ cmux send-key --surface {surface_ref} Enter
 
 ### Agent commands
 
-**claude** — launch with `--name` (so you can address it) and `--permission-mode auto` (so it never stops for approval); add `--model` when the user names one:
+**claude** — launch with `--name` (so you can address it) and `--permission-mode auto` (so it never stops for approval); add `--model` and `--effort` per the role:
 
 ```bash
-claude --name {name} --model {model} --permission-mode auto "Read {brief-path} and follow it."
+claude --name {name} --model {model} --effort {level} --permission-mode auto \
+  "Read {brief-path} and follow it. Start with a tool call, not a reply."
 ```
 
 Find its exact `--name` in `ListAgents`; drive the redo loop with `SendMessage(to: "{name}", notify_when_idle: true)`.
@@ -101,6 +106,8 @@ A TUI tab has no stdout to redirect, so unlike `-p` mode the brief must name the
 
 Keep each brief in a file and give the tab a one-line command that reads it. Every brief must require the agent to write its report to an absolute path you name, and to message you when it finishes (claude replies to the name in the `from` attribute of your message; codex and cursor can't message you, so watch their report files).
 
+That rule covers tab sessions only. An in-process subagent is blocked from writing a report file, so brief it to return the report as its final message; ask it for a file and it goes idle with the work done and nothing delivered.
+
 Verify from report files and your own commands, never from an agent's prose summary or its screen; `cmux read-screen` is for diagnosing a stuck session.
 
 ## Status and checklist
@@ -109,10 +116,13 @@ The workspace checklist belongs to the user: set one only on workspaces you crea
 
 ```bash
 cmux workspace status set <todo|working|review|needs-attention|done> --workspace {workspace_ref}
-cmux todo set '[{"text":"…","state":"in-progress"}, …]' --workspace {workspace_ref}
+cmux todo set '[{"text":"…","state":"pending"},{"text":"…","state":"in-progress"}]' --workspace {workspace_ref}
+cmux todo list --workspace {workspace_ref}
 ```
 
-Write the checklist once with `todo set` at workspace creation, then advance items with `cmux todo start <n>` and `cmux todo check <n>`. `needs-attention` means "stopped until a human acts", nothing else.
+Item state is `pending`, `in-progress`, or `completed`; the workspace status vocabulary is a separate set and `todo` rejects it.
+
+Write the checklist once with `todo set` at workspace creation, then advance items with `cmux todo start <n>` and `cmux todo check <n>` as each stage changes, never in one batch at the end: the checklist is the user's live view. `needs-attention` means "stopped until a human acts", nothing else.
 
 Use the description only for what status and checklist can't express, and clear it once resolved:
 
@@ -129,10 +139,22 @@ Tab sessions don't notify you the way in-process subagents do; arm a heartbeat b
 Monitor(command: 'while true; do echo "watchdog tick"; sleep 240; done', persistent: true)
 ```
 
+Let the heartbeat do the waiting; a chained `sleep` is blocked. To block on a condition, use `Monitor` with an `until` loop.
+
 On each tick, for every agent still working:
 
 1. `ListAgents`: listed, busy or idle? codex and cursor sessions never appear there; check them per their skills (process, thread or chat progress, report file).
 2. Compare the report's mtime and the working directory's git state (`git log --oneline -1`, `git status --porcelain`) against the previous tick.
 3. Idle with no report: ask it for its current state.
-4. Busy but unchanged across two ticks: message it; if it waits on a hung command, tell it to interrupt and retry.
+4. Busy but unchanged across two ticks: message it; if it waits on a hung command, tell it to interrupt and retry. Interrupt a tab with `send-key … Escape` (`C-c` is not a valid key name).
 5. Gone from `ListAgents`: open a new tab, `{role} (2)`, and launch a fresh agent with a brief stating what's done and what remains.
+
+### Idle without acting
+
+A tab session answers in prose, makes no tool call, and goes idle. Check the worktree's git state, then re-message with "start with a tool call, not a reply". Verify every claim against git, allowing for the reverse race: a commit can land seconds after you look.
+
+### After a cmux restart
+
+Tabs survive an app restart as dead terminals, and every `read-screen` fails with `internal_error: Failed to read terminal text`. Confirm with `cmux surface-health --workspace {workspace_ref}`: `in_window=false` on every surface means detached, not stuck.
+
+Leave the dead tabs and relaunch each agent per step 5. Your own session name changes across a restart, so re-read it from `ListAgents` before briefing anyone to message you.
