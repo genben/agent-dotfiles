@@ -45,6 +45,17 @@ One paragraph: what this evidence demonstrates.
 
 Only screenshots and recordings of the real product are evidence: hard to fake, they prove behavior. Mermaid diagrams and HTML files are agent-authored explanations; they help the reader but prove nothing and can be wrong, so only the user's verdict validates them.
 
+## Make the delta visible
+
+A before/after pair is not evidence if the reader has to hunt for the difference. When the change is small — a few words, one row, one control — a full-page pair reads as "these look the same", and the reader is right to reject it.
+
+- Crop to the changed region and mark it: outline the changed cells, or screenshot the element itself so the crop survives layout shifts.
+- Include the control state that must not change: the other locale, the other role, the untouched tab. It turns "something differs" into "it differs for the right reason, and nothing else moved".
+- Read the affected values out of the DOM, the log, or the API response in each state, and put that text in the manifest. Text is the claim; the image illustrates it.
+- Never claim pixel or byte identity from a text comparison. Changed text changes widths, and a shifted column carries every column to its right. Write "text identical, layout shifted" with the measured pixel count.
+
+Keep the full-page capture as well, for context, but lead with the crop.
+
 ## Workflow
 
 1. Confirm what to demonstrate; record repo name, branch, and HEAD sha.
