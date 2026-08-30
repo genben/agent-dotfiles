@@ -13,7 +13,7 @@ Review one target with independent reviewers on different harnesses and models, 
 |---|---|---|---|---|
 | `claude-opus-N` | claude | opus-5 | xhigh | review-with-claude |
 | `codex-N` | codex | gpt-5.6 sol | xhigh | review-with-codex |
-| `cursor-N` | cursor | grok-4.6 | xhigh | review-with-cursor |
+| `cursor-N` | cursor | kimi-k3 | max | review-with-cursor |
 | `claude-fable-N` | claude | fable-5 | high | review-with-claude |
 
 - Use Fable model only when user explicitely requested it. Otherwise, run only 3 reviewers (opus, codex, cursor).
