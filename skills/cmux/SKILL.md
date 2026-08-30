@@ -97,7 +97,7 @@ codex --approve-for-me "$(cat {brief-path})"
 
 ```bash
 chat=$(agent create-chat)    # record this id
-agent --resume="$chat" --model cursor-grok-4.6-xhigh --force "$(cat {brief-path})"
+agent --resume="$chat" --model kimi-k3-max --auto-review "$(cat {brief-path})"
 ```
 
 A TUI tab has no stdout to redirect, so unlike `-p` mode the brief must name the report path. Send follow-ups by typing into the tab (`cmux send` + `send-key Enter`), never with concurrent `-p` calls on the same chat.
