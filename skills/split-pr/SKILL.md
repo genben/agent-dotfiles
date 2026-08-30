@@ -15,7 +15,7 @@ You manage subagents (analyst, implementer, reviewers, merger); you never do the
 - **Reject half-done work.** Name the unmet acceptance criterion in the redo message; never "try again".
 - **Take over a step** only after a subagent has failed the same criterion twice.
 - Launch independent subagents in parallel. Honor any user or memory instruction about the agent model.
-- Subagents run as their own `claude` session in a cmux tab inside cmux, in-process through the Agent tool everywhere else. Briefs, acceptance criteria, and the redo policy are identical either way.
+- Subagents run as their own `claude` session in a cmux tab inside cmux (per the cmux skill), in-process through the Agent tool everywhere else. Briefs, acceptance criteria, and the redo policy are identical either way.
 - **Messages carry findings, not essays.** State the finding, the evidence, and what "done" looks like; cut context-setting and restatement.
 
 ## Worktree ownership (every agent, every phase)
@@ -77,126 +77,20 @@ Record in the entries, as they happen: the approved grouping and cherry-pick ord
 
 ## Running inside cmux
 
-Detect the mode once, at the start of Phase 2, and record it in the progress file:
+Detect the mode once, at the start of Phase 2, and record it in the progress file (detection command, workspace, tab, agent-launch, status, and checklist mechanics all live in the **cmux skill**; follow it). Outside cmux, run subagents in-process.
 
-```bash
-[ -n "$CMUX_WORKSPACE_ID" ] && command -v cmux >/dev/null 2>&1 && echo "cmux mode"
-```
+Split-pr specifics on top of that skill:
 
-Outside cmux, skip every `cmux` command in this section and run subagents in-process.
-
-### Rules
-
-- Only you call `cmux`; subagents never do.
-- One cmux mutation at a time (concurrent ones corrupt the sidebar layout): wait for its `OK`, prefer the atomic forms (`workspace create --layout`, `todo set`).
-- Never take focus: pass `--focus false`; never run `workspace select`, `focus-pane`, or `focus-panel`.
-- Never close a workspace or a tab, never terminate an agent, finished or not. To rerun a subagent, open a **new** tab named `implementer (2)`, and so on.
-- Never reorder existing workspaces or groups; everything this workflow creates goes to the bottom of the sidebar.
-- Touch only workspaces you create. Leave the feature branch's own workspace, status, and checklist alone.
-
-### One group per split
-
-```bash
-cmux workspace-group create --name "split-pr: {branch}" --json    # → workspace_group:N
-cmux workspace-group move workspace_group:N --to-index 999
-```
-
-Group creation also creates an anchor workspace whose row is the group header: leave it empty. Groups do not nest, so this group is top-level. Record the group ref and anchor ref in the progress file.
-
-### One workspace per extracted PR
-
-Create the worktree yourself so the workspace has a directory to open; the implementer then starts at the init command.
-
-```bash
-git worktree add {worktree} -b {pr-branch} {base}
-cmux workspace create --name "{pr-branch}" --cwd "{worktree}" --focus false \
-  --group workspace_group:N --group-placement end --json      # → workspace_ref
-```
-
-- Name the workspace after the branch only; cmux shows the PR link itself.
-- Record `workspace_ref` and the workspace UUID (`workspaces[].id` from `cmux workspace list --json`; it survives an app restart).
-- Give every tab its own `--working-directory`; the workspace's `--cwd` seeds only the first tab.
-- Created a workspace by mistake? Rename it for the next PR (`cmux rename-workspace --workspace {ref} "{other-pr-branch}"`), never close it.
-
-### One tab per subagent
-
-Launch each agent with `--name` (so you can address it) and `--permission-mode auto` (so it never stops for approval).
-
-The first agent goes in the workspace's own tab, created in one mutation:
-
-```bash
-cmux workspace create --name "{pr-branch}" --cwd "{worktree}" --focus false \
-  --group workspace_group:N --group-placement end --json \
-  --layout '{"pane":{"surfaces":[{"type":"terminal","command":"claude --name {pr-branch}-implementer --permission-mode auto \"Read {brief-path} and follow it.\""}]}}'
-```
-
-Every later agent gets its own new tab:
-
-```bash
-cmux new-surface --type terminal --workspace {workspace_ref} \
-  --working-directory "{worktree}" --focus false               # → surface_ref
-cmux rename-tab --workspace {workspace_ref} --surface {surface_ref} "implementer"
-cmux send --surface {surface_ref} 'claude --name {pr-branch}-implementer --permission-mode auto "Read {brief-path} and follow it."'
-cmux send-key --surface {surface_ref} Enter
-```
-
-- `cmux send` types the text; `send-key Enter` submits it.
-- Confirm the session came up with `cmux read-screen --workspace {workspace_ref} --surface {surface_ref} --lines 20`, then find its exact `--name` in `ListAgents`. Clear a "Do you trust this folder?" prompt with `cmux send-key --workspace {workspace_ref} --surface {surface_ref} Enter`.
-- Tab names: `implementer`, `reviewer`, `codex reviewer`, `merger`. One session serves all of that role's rounds; a rerun gets a new tab and agent name, and the old tab stays open.
-
-### Talking to the agents
-
-Keep each brief in a file under `docs/plans/{branch}/split-pr/briefs/` and give the tab a one-line command that reads it. Every brief must require the agent to:
-
-1. Write its report to an absolute path you name, `docs/plans/{branch}/split-pr/{pr-branch}.{role}.md` in the original worktree: PR URL, commits, file list, lint result, test command with exit code and output tail, findings.
-2. Message you when it finishes, replying to the name in the `from` attribute of your message.
-
-Verify from that report and your own `gh pr diff --name-only` and `gh pr view`, never from an agent's prose summary or its screen (`cmux read-screen` is for diagnosing a stuck session).
-
-Drive the redo loop with `SendMessage(to: "{agent-name}", notify_when_idle: true)`.
-
-### Status and checklist
-
-Set these on per-PR workspaces only:
-
-```bash
-cmux workspace status set <todo|working|review|needs-attention|done> --workspace {workspace_ref}
-cmux todo set '[{"text":"cherry-pick commits","state":"in-progress"}, …]' --workspace {workspace_ref}
-```
-
-Write the checklist once with `todo set` at workspace creation, then advance items with `cmux todo start <n>` and `cmux todo check <n>`:
-
-`create worktree` · `cherry-pick commits` · `lint + full tests` · `push + open PR` · `describe PR` · `review (claude)` · `review (codex)` · `cross-validate findings` · `fix findings` · `human review` · `merge` · `back-merge + cleanup`
-
-Status lanes: `todo` while queued, `working` while extracting, testing, or fixing, `review` during review rounds, `needs-attention` only for "stopped until a human acts", `done` once merged.
-
-The checklist belongs to the user: keep to the items above and never edit an item you didn't create.
-
-Use the description only for what status and checklist can't express, and clear it once resolved:
-
-```bash
-cmux workspace-action --action set-description --description "2 test failures: test_siprec_rules" --workspace {workspace_ref}
-cmux workspace-action --action clear-description --workspace {workspace_ref}
-```
+- One group per split, named `split-pr: {branch}`; record the group and anchor refs in the progress file.
+- One workspace per extracted PR, named after the PR branch only (cmux shows the PR link itself). Create the worktree yourself first (`git worktree add {worktree} -b {pr-branch} {base}`) so the workspace has a directory to open; the implementer starts at the init command. Record `workspace_ref` and the workspace UUID in the progress file.
+- One tab per subagent, named `implementer`, `reviewer`, `codex reviewer`, `merger`; the implementer rides the workspace's first tab. Agent names: `{pr-branch}-{role}`.
+- Briefs live under `docs/plans/{branch}/split-pr/briefs/`; every brief requires the report at `docs/plans/{branch}/split-pr/{pr-branch}.{role}.md` in the original worktree: PR URL, commits, file list, lint result, test command with exit code and output tail, findings. Verify from that report and your own `gh pr diff --name-only` and `gh pr view`.
+- Checklist, written once at workspace creation: `create worktree` · `cherry-pick commits` · `lint + full tests` · `push + open PR` · `describe PR` · `review (claude)` · `review (codex)` · `cross-validate findings` · `fix findings` · `human review` · `merge` · `back-merge + cleanup`.
+- Status lanes: `todo` while queued, `working` while extracting, testing, or fixing, `review` during review rounds, `needs-attention` only for "stopped until a human acts", `done` once merged.
 
 ## Supervising the agents
 
-Check every running agent at least every five minutes. In-process subagents notify you; for tab sessions, arm a heartbeat before dispatching the first one:
-
-```
-Monitor(command: 'while true; do echo "watchdog tick"; sleep 240; done', persistent: true)
-```
-
-On each tick, for every agent still working:
-
-1. `ListAgents`: listed, busy or idle? A codex session is not a peer session: check its process (`pgrep -f codex`), thread progress (`select max(completed_at) from thread_turns where thread_id='{thread-id}';`), and report file. A codex tab back at a shell prompt has exited.
-2. Compare the report's mtime, `git -C {worktree} log --oneline -1`, and `git -C {worktree} status --porcelain` against the previous tick.
-3. Idle with no report: ask it for its current state.
-4. Busy but unchanged across two ticks: message it, or `codex queue` it; if it waits on a hung command, tell it to interrupt and retry.
-5. Gone from `ListAgents`: open a new tab, `{role} (2)`, and launch a fresh agent with a brief stating what's done (from the progress file and worktree git state) and what remains.
-6. Record every intervention and restart in the progress file.
-
-Stop the watchdog with `TaskStop` when the last pipeline finishes.
+Check every running agent at least every five minutes. In-process subagents notify you; supervise tab sessions per the cmux skill (watchdog heartbeat, per-tick checks, restart in a new tab). Record every intervention and restart in the progress file; a restarted agent's brief states what's done (from the progress file and worktree git state) and what remains.
 
 ## Adversarial review with two reviewers
 
@@ -231,43 +125,7 @@ Reviewers may run the suite, linters, type checker, any check in the repo's CLAU
 Give every brief a shared preamble (allowed commands, prohibitions, review dimensions, id prefix) and a per-PR section naming what to attack in that diff. A generic brief returns generic findings.
 
 - **claude reviewer**: in cmux, a new tab named `reviewer`; otherwise an in-process subagent. Writes `{plan-dir}/{pr-branch}.claude-review.md`.
-- **codex reviewer**: in cmux, the interactive TUI in a new tab named `codex reviewer`; one session carries review, validation, and rebuttal:
-
-  ```bash
-  codex --approve-for-me "$(cat {plan-dir}/briefs/{pr-branch}.codex-review.md)"
-  ```
-
-  Outside cmux, run the non-interactive form in the background; that brief makes the report its final message, which `-o` captures:
-
-  ```bash
-  codex exec \
-    -o {plan-dir}/{pr-branch}.codex-review.md \
-    "$(cat {plan-dir}/briefs/{pr-branch}.codex-review.md)"
-  ```
-
-Driving codex:
-
-- **Address a session by thread id.** Interactive codex has no `--name`: open the brief with a unique marker line (`split-pr {branch} {pr-branch} codex-reviewer`) and resolve the thread once the session starts. Match the marker, never "the newest thread". Record the id in the progress file.
-
-  ```bash
-  sqlite3 ~/.codex/thread_history_1.sqlite \
-    "select thread_id from thread_items where item_type='userMessage'
-      and item_json like '%{marker}%' order by created_at_ms desc limit 1;"
-  ```
-
-- **Send follow-ups with `codex queue --thread {thread-id} --message "…"`**, the codex counterpart of `SendMessage`; one session keeps its context across review, validation, and rebuttal.
-- **Collect results from the report file.** To read the session's last message without the screen:
-
-  ```bash
-  sqlite3 ~/.codex/thread_history_1.sqlite \
-    "select item_json from thread_items where thread_id='{thread-id}'
-      and item_type='agentMessage' order by rollout_ordinal desc limit 1;"
-  ```
-
-- **Pass no `--sandbox` flag.** `~/.codex/config.toml` and the repo's `.codex/rules/*.rules` decide what codex may run; rules can allow test commands outside the sandbox, which is how the reviewer reaches the database and a browser. Anything uncovered raises an escalation that `approvals_reviewer` decides. Never use `--dangerously-bypass-approvals-and-sandbox`; `--approve-for-me` can't combine with `--sandbox`.
-- **Read `.codex/rules/` before writing the brief** and tell the reviewer which check commands it can run. Without such rules, codex has no network and no database.
-- **Don't use `codex exec review`**: it imposes its own report format and a tighter sandbox that can't reach the database.
-- An interactive session stays alive after answering; queue more work into it. `codex exec` exits and leaves its tab at a shell prompt; leave the tab open. A finished tab with no report means the run died; read the tab before relaunching.
+- **codex reviewer**: run it per the review-with-codex skill; one session carries review, validation, and rebuttal. In cmux, the interactive TUI in a new tab named `codex reviewer`; outside cmux, the non-interactive form in the background. Report: `{plan-dir}/{pr-branch}.codex-review.md`; brief: `{plan-dir}/briefs/{pr-branch}.codex-review.md`; marker line: `split-pr {branch} {pr-branch} codex-reviewer`. Record the thread id in the progress file.
 
 ### Dedupe
 
