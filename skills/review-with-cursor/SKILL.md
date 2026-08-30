@@ -10,8 +10,7 @@ Run the cursor CLI as an adversarial reviewer of a diff. One chat carries the wh
 ## Model and permissions
 
 - Default model: `--model cursor-grok-4.6-xhigh`. Verify the id with `agent --list-models` if the run rejects it.
-- Pass `--force`: auto-approves every tool call unless `~/.cursor/cli-config.json` `permissions.deny` blocks it (`--yolo` is an alias for it). Don't pass `--auto-review` in print mode; it prompts for unsafe calls and a headless run can't answer, and it hard-conflicts with `--force`.
-- Read `.cursor/rules/` before writing the brief and tell the reviewer which check commands it can run.
+- Pass `--auto-review` to use a classifier to automatically approve every tool call when running interactively in cmux tab. For in print mode, pass `--force` (yolo mode).
 
 ## The brief
 
