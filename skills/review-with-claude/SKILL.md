@@ -9,20 +9,24 @@ Run the claude CLI as an adversarial reviewer of a diff. One session carries the
 
 ## Model and permissions
 
-- Pass `--permission-mode auto`: a classifier answers permission requests, so a headless run never stalls; a denied call just fails and the reviewer works around it. Never use `--dangerously-skip-permissions`.
+- Pass `--permission-mode auto`: a classifier answers permission requests, so a headless run never stalls; a denied call just fails and the reviewer works around it. Never use `--dangerously-skip-permissions`. The classifier rate-limits when sessions start together ("auto mode cannot determine the safety of ..."); stagger parallel launches and re-message a reviewer that stalled on it.
 - The default model is fine; add `--model {alias-or-id}` when the user names one.
+- Set effort with `--effort {low|medium|high|xhigh|max}` on every call, `--resume` follow-ups included. An unrecognised level warns and falls back to the default instead of failing, so check the launch line.
 - The repo's CLAUDE.md loads automatically, so the reviewer already knows the repo's check commands; the brief only restricts, never re-teaches them.
 
 ## The brief
 
 Follow review-with-codex for the brief's content: the diff, the review dimensions, what to attack, the allowed checks, the no-edits rule, the production-path bar, and the findings format (ids `claude-{model}-N`, such as `claude-opus-3` or `claude-fable-2`; the model qualifier keeps parallel claude reviewers from colliding). Report capture depends on the launch form: headless `-p` prints the final message to stdout, so don't name a report path in the brief; an interactive session has no stdout to redirect, so its brief must name the report path. No marker line is needed; the session is addressed by `--name` or a pre-chosen session id.
 
+Both launch forms below are a separate `claude` process and may write files. An in-process subagent (the Agent tool) may not, so brief it to return the report as its final message.
+
 ## Launching
 
 Interactive TUI, in a terminal you keep open (a cmux or tmux tab, per the cmux skill); the session stays alive for follow-ups:
 
 ```bash
-claude --name {name} --session-id "$session" --permission-mode auto "Read {brief-path} and follow it."
+claude --name {name} --session-id "$session" --model {model} --effort {level} \
+  --permission-mode auto "Read {brief-path} and follow it."
 ```
 
 `--name` makes the session addressable from a Claude Code orchestrator; include the model in it (`claude-opus-reviewer`, `claude-fable-reviewer`) so parallel claude sessions resolve unambiguously in `ListAgents`. `--session-id` (a pre-generated UUID, as below) keys the transcript for monitoring; record which UUID belongs to which reviewer.
@@ -31,7 +35,7 @@ Non-interactive, in the background (a long review takes minutes); choose the ses
 
 ```bash
 session=$(uuidgen | tr 'A-Z' 'a-z')   # record this id
-claude -p --session-id "$session" --permission-mode auto \
+claude -p --session-id "$session" --model {model} --effort {level} --permission-mode auto \
   "$(cat {brief-path})" > {report-path}
 ```
 
@@ -46,7 +50,7 @@ Sessions are stored per directory (`~/.claude/projects/{cwd, slashes as dashes}/
 - **Headless**: send each follow-up as another `-p` call resuming the same session; context persists across turns:
 
   ```bash
-  claude -p --resume "$session" --permission-mode auto "{message}" > {reply-path}
+  claude -p --resume "$session" --effort {level} --permission-mode auto "{message}" > {reply-path}
   ```
 
   Turns are strictly request/response: wait for the current call to exit before sending the next. Don't pass `--fork-session`; a fork answers from the history but stops sharing a session with later follow-ups.
