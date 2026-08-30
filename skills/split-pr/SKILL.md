@@ -15,7 +15,7 @@ You manage subagents (analyst, implementer, reviewers, merger); you never do the
 - **Reject half-done work.** Name the unmet acceptance criterion in the redo message; never "try again".
 - **Take over a step** only after a subagent has failed the same criterion twice.
 - Launch independent subagents in parallel. Honor any user or memory instruction about the agent model.
-- Subagents run as their own `claude` session in a cmux tab inside cmux (per the cmux skill), in-process through the Agent tool everywhere else. Briefs, acceptance criteria, and the redo policy are identical either way.
+- Subagents run as their own `claude` session in a cmux tab inside cmux (per the `orchestrate-agents-in-cmux` skill), in-process through the Agent tool everywhere else. Briefs, acceptance criteria, and the redo policy are identical either way.
 - **Messages carry findings, not essays.** State the finding, the evidence, and what "done" looks like; cut context-setting and restatement.
 
 ## Worktree ownership (every agent, every phase)
@@ -77,7 +77,7 @@ Record in the entries, as they happen: the approved grouping and cherry-pick ord
 
 ## Running inside cmux
 
-Detect the mode once, at the start of Phase 2, and record it in the progress file (detection command, workspace, tab, agent-launch, status, and checklist mechanics all live in the **cmux skill**; follow it). Outside cmux, run subagents in-process.
+Detect the mode once, at the start of Phase 2, and record it in the progress file (detection command, workspace, tab, agent-launch, status, and checklist mechanics all live in the **`orchestrate-agents-in-cmux` skill**; follow it). Outside cmux, run subagents in-process.
 
 Split-pr specifics on top of that skill:
 
@@ -90,7 +90,7 @@ Split-pr specifics on top of that skill:
 
 ## Supervising the agents
 
-Check every running agent at least every five minutes. In-process subagents notify you; supervise tab sessions per the cmux skill (watchdog heartbeat, per-tick checks, restart in a new tab). Record every intervention and restart in the progress file; a restarted agent's brief states what's done (from the progress file and worktree git state) and what remains.
+Check every running agent at least every five minutes. In-process subagents notify you; supervise tab sessions per the `orchestrate-agents-in-cmux` skill (watchdog heartbeat, per-tick checks, restart in a new tab). Record every intervention and restart in the progress file; a restarted agent's brief states what's done (from the progress file and worktree git state) and what remains.
 
 ## Adversarial review with two reviewers
 

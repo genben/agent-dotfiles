@@ -22,7 +22,7 @@ Both launch forms below are a separate `claude` process and may write files. An 
 
 ## Launching
 
-Interactive TUI, in a terminal you keep open (a cmux or tmux tab, per the cmux skill); the session stays alive for follow-ups:
+Interactive TUI, in a terminal you keep open (a cmux or tmux tab, per the `orchestrate-agents-in-cmux` skill); the session stays alive for follow-ups:
 
 ```bash
 claude --name {name} --session-id "$session" --model {model} --effort {level} \
@@ -39,7 +39,7 @@ claude -p --session-id "$session" --model {model} --effort {level} --permission-
   "$(cat {brief-path})" > {report-path}
 ```
 
-Headless `-p` never shows the trust dialog; the interactive form can stop on one in an unfamiliar directory (see the cmux skill).
+Headless `-p` never shows the trust dialog; the interactive form can stop on one in an unfamiliar directory (see the `orchestrate-agents-in-cmux` skill).
 
 Sessions are stored per directory (`~/.claude/projects/{cwd, slashes as dashes}/{session}.jsonl`, keyed by the resolved path, so `/private/tmp/...` on macOS): run every call on a session from the same repo root.
 

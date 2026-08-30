@@ -24,7 +24,7 @@ Create the chat first so the id is known before the run starts; both forms run f
 chat=$(agent create-chat)   # record this id
 ```
 
-Interactive TUI, in a terminal you keep open (a cmux or tmux tab, per the cmux skill); the session stays alive for follow-ups:
+Interactive TUI, in a terminal you keep open (a cmux or tmux tab, per the `orchestrate-agents-in-cmux` skill); the session stays alive for follow-ups:
 
 ```bash
 agent --resume="$chat" --model kimi-k3-max --auto-review "$(cat {brief-path})"
@@ -37,7 +37,7 @@ agent -p --resume="$chat" --model kimi-k3-max --force \
   "$(cat {brief-path})" > {report-path}
 ```
 
-Headless `-p` never prompts for trust; the TUI can stop on a trust prompt in an unfamiliar workspace (add `--trust`, or clear it per the cmux skill).
+Headless `-p` never prompts for trust; the TUI can stop on a trust prompt in an unfamiliar workspace (add `--trust`, or clear it per the `orchestrate-agents-in-cmux` skill).
 
 Conversation state lives server-side, keyed by the chat id; `~/.cursor/chats/<cwd-hash>/<chat-id>/` is only a per-cwd local cache. So `-p` follow-ups keep context from any cwd, but the TUI and `meta.json` hydrate from the cache: open the TUI from the same directory as `create-chat`, and a resume from another cwd creates a second cache dir for the same id.
 

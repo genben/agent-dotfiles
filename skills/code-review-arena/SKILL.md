@@ -20,7 +20,7 @@ Review one target with independent reviewers on different harnesses and models, 
 
 - Pass effort explicitly, since a missing flag silently means default: `claude --effort xhigh`, `codex -c model_reasoning_effort=xhigh`, cursor in the model id.
 - For claude reviewers pass the `opus` alias, never a bare id: `--model opus` resolves to the 1M-context build (`claude-opus-5[1m]`), while `--model opus-5` or `--model claude-opus-5` pins the 200k variant.
-- One cmux workspace for the review, one tab per reviewer (cmux skill). Outside cmux, use each skill's headless background form.
+- One cmux workspace for the review, one tab per reviewer (`orchestrate-agents-in-cmux` skill). Outside cmux, use each skill's headless background form.
 
 ## Frame
 
@@ -41,7 +41,7 @@ Blind rule: no reviewer sees another's findings until its own report is written;
 
 ## Collect and merge
 
-Supervise per the cmux skill; verify from report files, never from screens or prose. When every report exists:
+Supervise per the `orchestrate-agents-in-cmux` skill; verify from report files, never from screens or prose. When every report exists:
 
 - Merge findings that share a root cause and keep every originating id (`found-by: claude-opus-2, cursor-5`). Convergence raises confidence, but reject nothing for being unique; a unique catch is why the third harness is there.
 - Drop nothing yet. The merged doc is the cross-judge input.
