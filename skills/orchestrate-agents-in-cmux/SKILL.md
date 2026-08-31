@@ -24,7 +24,7 @@ Use `CMUX_WORKSPACE_ID` and `CMUX_SURFACE_ID` as targeting hints when present, n
 ## File-first communication
 
 - Put the detailed assignment and work plan in a brief. Send the agent only a short action and the absolute brief path.
-- Give the agent a worklog path. Require it to persist progress, surprises, discoveries, and plan deviations while it works.
+- Give the agent a worklog path. Require its first action to create a meaningful entry, then append handoffs, state changes, surprises, discoveries, and plan deviations as they happen. Do not pre-create an empty worklog.
 - Give the agent a separate result path. Require it to persist the final result there before sending a short completion message with the path.
 - Record callback receipt and delivery evidence in the orchestrator's worklog; the child's result cannot report the outcome of a callback sent afterward.
 - Keep `SendMessage`, `codex queue`, and cmux-typed messages to file references, state changes, questions, and short check-ins. Put complex instructions, findings, and reports in files.
@@ -32,7 +32,7 @@ Use `CMUX_WORKSPACE_ID` and `CMUX_SURFACE_ID` as targeting hints when present, n
 
 ## Rules
 
-- Only the orchestrator calls `cmux`; controlled agents never manage cmux.
+- Only the designated controller for a workspace calls `cmux`. A calling workflow may designate a team lead as the controller for its member workspace. Controlled members never manage cmux.
 - Claude Code and Codex may orchestrate. Treat Cursor as a controlled agent only.
 - Use one workspace per unit of work and one tab, brief, worklog, and result file per agent assignment.
 - Perform one cmux mutation per shell call. Require exit status `0`; parse JSON commands for their refs, and require `OK` from commands whose documented response is `OK`.
@@ -54,7 +54,7 @@ For ordinary sends to Claude, run [scripts/claude_queue.py](scripts/claude_queue
 
 1. Create or select a workspace owned by this orchestration run.
 2. Resolve and create the artifact directory using the location rule above.
-3. Write each brief with the task, work plan, boundaries, acceptance checks, worklog path, result path, and callback contract. Tell an agent awaiting a follow-up to send a ready check-in and end its turn; never ask it to poll inside an active turn.
+3. Write each brief with the task, work plan, boundaries, acceptance checks, worklog path, result path, and callback contract. For a one-turn assignment, require any handshake and let the agent continue. If the assignment needs a later addendum, require a ready check-in and an ended turn, then send an explicit go-ahead before expecting work. Never ask an agent to poll inside an active turn.
 4. Launch each agent in a dedicated tab. Record its Claude name and PID, Codex thread UUID, or Cursor chat UUID as applicable.
 5. Send short file pointers and check-ins through the harness transport. Put detailed follow-ups in an addendum file first.
 6. Supervise callbacks, worklog updates, result creation, and repository state. Inspect the cmux tab when progress stops.

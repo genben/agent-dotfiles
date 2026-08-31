@@ -7,8 +7,10 @@ Use these commands only after the entrypoint's precondition checks pass. Run eac
 When one task spans several workspaces, create a group and leave its anchor workspace empty:
 
 ```bash
-cmux workspace-group create --name "{task}" --json
+cmux workspace-group create --name "{task}" --cwd "{dir}" --json
 ```
+
+Pass `--cwd` even though the anchor stays empty. Without it, cmux can inherit an unrelated focused workspace directory.
 
 Create one workspace per worktree or independent unit:
 
@@ -17,7 +19,13 @@ cmux workspace create --name "{name}" --cwd "{dir}" --focus false \
   --group workspace_group:N --group-placement end --json
 ```
 
-Record the returned `workspace_ref` and the workspace UUID from `cmux workspace list --json`. The UUID survives an app restart. The workspace's `--cwd` applies only to its first tab; pass `--working-directory` for later tabs.
+Record the returned `workspace_ref` and its UUID. Filter the list instead of loading every workspace:
+
+```bash
+cmux workspace list --json | jq '.workspaces[] | select(.ref == "{workspace_ref}") | {ref,id,title,current_directory}'
+```
+
+The UUID survives an app restart. The workspace's `--cwd` applies only to its first tab; pass `--working-directory` for later tabs.
 
 Create agent tabs one mutation at a time. Keeping the launch command out of layout JSON avoids nested quoting errors:
 
@@ -37,16 +45,20 @@ Claude Code:
 
 ```bash
 claude --name {unique-name} --model {model} --effort {level} --permission-mode auto \
+  --add-dir "{artifact-dir}" \
   "Read {brief-path} and follow it. Start with a tool call, not a reply."
 ```
 
 Codex:
 
 ```bash
-codex {permission-options} "Read {brief-path} and follow it. Start with a tool call, not a reply."
+codex --approve-for-me -C "{worktree}" --add-dir "{artifact-dir}" \
+  "Read {brief-path} and follow it. Start with a tool call, not a reply."
 ```
 
-Choose permission and sandbox options that permit the required handshake, worklog, and result writes without granting broader autonomy than the assignment needs. For a source-review-only task, prohibit source edits in the brief and limit authorized writes to its orchestration directory.
+The Codex recipe above was verified with Codex 0.151.0. `--approve-for-me` selects the workspace-write sandbox; do not combine it with `--sandbox`. If automatic review is inappropriate, use the compatible pair `--sandbox workspace-write --ask-for-approval never` and expect cmux or callback operations outside the sandbox to fail. Check `codex --help` when the installed version differs.
+
+Choose the narrowest roots that permit the worktree and exact artifact directory. For a source-review-only task, prohibit source edits in the brief. Treat startup as incomplete until the agent writes its first meaningful worklog entry. If that write fails, relaunch with corrected writable roots.
 
 Cursor:
 

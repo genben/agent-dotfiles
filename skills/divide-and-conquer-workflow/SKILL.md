@@ -34,13 +34,15 @@ owner <-> orchestrator <-> team leads <-> team members
 
 The orchestrator communicates with team leads, not their members. A team member escalates through its lead, and a lead escalates owner decisions through the orchestrator. Replace a failed role at the same boundary instead of bypassing a healthy lead.
 
+A lead is the designated cmux controller for its team workspace. It is a controlled agent at the parent boundary and the controller at the member boundary. Team members never call cmux.
+
 ## Divide by deliverable
 
 - Give each team one independently deliverable workstream, branch, worktree, cmux workspace, lead, worklog, and final result.
 - Keep overlapping files and coupled decisions under one lead.
 - Record dependencies between teams and run only independent work in parallel.
 - Limit concurrency when teams compete for machines, test environments, integration branches, or other shared resources.
-- Let the orchestrator create each worktree and workspace before launching its lead. The lead then uses `orchestrate-agents-in-cmux` to create member tabs.
+- Let the orchestrator create each worktree and workspace before launching its lead. Give the lead the typed workspace ref and designate it as that workspace's cmux controller.
 
 ## Preserve authority
 
@@ -53,8 +55,9 @@ The orchestrator writes coordination artifacts rather than product code. It veri
 Use the artifact location and file-first contract from `orchestrate-agents-in-cmux`.
 
 - The orchestrator worklog tracks the workstreams, dependencies, team states, owner decisions, shared-resource grants, and integration order.
-- Each lead brief defines the outcome, ownership, acceptance criteria, authority, checkpoints, artifact paths, and parent callback.
+- Each lead brief defines the outcome, ownership, acceptance criteria, authority, checkpoints, artifact paths, parent callback, cmux workspace ref, and required task skills.
 - Each lead maintains its worklog and final result. It gives every member separate brief, worklog, and result files.
+- Create worklogs with the first meaningful entry. Append each handoff, decision, state change, surprise, and deviation when it happens. Empty placeholder worklogs and end-of-run reconstruction are not live state.
 
 ## Run the effort
 

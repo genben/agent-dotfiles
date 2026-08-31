@@ -2,6 +2,8 @@
 
 All transports are asynchronous. A successful send proves delivery to an inbox, not that the receiving model processed or completed the request.
 
+Use one turn when the complete assignment is already in the brief. The child publishes any required handshake and continues working. Use a ready callback and a separate turn only when the parent must supply a later addendum. After readiness, the parent must queue that addendum or an explicit go-ahead before it waits for a result.
+
 Follow the file-first contract in `SKILL.md`. Every assignment has a brief, a live worklog, and a separate final result file. Transport messages contain only a task identifier, short state or question, and an absolute file path. Write a detailed follow-up to an addendum file before notifying the agent.
 
 Resolve orchestration file paths using the location rule in `SKILL.md`. Do not place Claude tokens in prompts, arguments, or those files.
@@ -42,7 +44,7 @@ python3 {skill-dir}/scripts/find_claude_pid.py "{unique-name}"
 
 Create the chat from the orchestrator shell first with `agent create-chat` and record its UUID. Give the brief absolute worklog and result paths plus the parent callback command. Cursor has no inbound queue transport in this workflow.
 
-Any callback command placed in a child's brief requires the parent harness CLI to be installed and authenticated in the child environment. Verify that prerequisite before launch. If it is unavailable, omit the unusable callback command and make the parent monitor the worklog and result file directly.
+Verify the exact callback command in the child environment before launch. `codex queue` needs the Codex CLI and writable Codex state. `claude_queue.py` needs `python3`, the bundled script, and the target Claude socket and key. If the callback cannot work, omit it and make the parent monitor the worklog and result file directly.
 
 ## Send to Codex
 
@@ -56,7 +58,7 @@ Use the explicit UUID, not a display name. The message starts a turn when Codex 
 
 `codex queue` updates Codex's local state. In a restricted environment it may fail with `attempt to write a readonly database` for `~/.codex/state_*.sqlite`; retry the same command from a context permitted to update that state.
 
-Never tell a Codex worker to poll while awaiting a queued follow-up. Require it to send a ready callback and end the current turn, then queue the addendum pointer. If a busy turn is interrupted with Escape, queued messages may not start afterward; once the TUI visibly returns to `Ready`, use cmux typing as recovery.
+Never tell a Codex worker to poll while awaiting a queued follow-up. For a staged assignment, require it to send a ready callback and end the current turn. The parent then queues the addendum pointer before expecting work or a result. If a busy turn is interrupted with Escape, queued messages may not start afterward; once the TUI visibly returns to `Ready`, use cmux typing as recovery.
 
 ## Send to Claude
 
@@ -94,7 +96,7 @@ Parent callback
   python3 {skill-dir}/scripts/claude_queue.py {parent-claude-pid} "{short-message-with-file-path}"
 ```
 
-After the thread file appears, Claude sends follow-ups with `codex queue --thread ...`. Codex returns through `claude_queue.py`. For a multi-turn assignment, require Codex to send a ready callback and end its turn before Claude queues the next addendum.
+After the thread file appears, Claude sends follow-ups with `codex queue --thread ...`. Codex returns through `claude_queue.py`. For a one-turn assignment, Codex continues after the handshake. For a staged assignment, Codex sends a ready callback and ends its turn; Claude must then queue the next addendum or an explicit go-ahead.
 
 ## Codex starts Claude
 
@@ -112,7 +114,7 @@ Resolve the child's PID with `find_claude_pid.py` after its live registry entry 
 
 ## Codex starts Codex
 
-Give the child the parent thread UUID and a unique thread handshake file. Both sides send short pointers and check-ins with `codex queue --thread ...`. Give every child a distinct brief, worklog, result, and handshake file. End each turn before waiting for the next queued addendum.
+Give the child the parent thread UUID and a unique thread handshake file. Both sides send short pointers and check-ins with `codex queue --thread ...`. Give every child a distinct brief, worklog, result, and handshake file. In a staged assignment, end each turn before waiting for the next queued addendum and require the sender to start the next turn explicitly.
 
 ## Control Cursor
 
@@ -130,6 +132,8 @@ Cursor follow-ups become the next turn; there is no mid-turn steering. Require C
 - Missing Claude socket: restart that Claude session; the listener does not retry setup.
 - Missing Codex handshake: inspect the named surface, then run `cmux send --surface {surface_ref} 'Publish CODEX_THREAD_ID to {thread-file}.'` followed by `cmux send-key --surface {surface_ref} Enter`.
 - Send succeeds but no callback: inspect the worklog, result file, and repository, then send a short state request.
+- Complete result but callback cannot write Codex state: record the callback failure and accept parent-side result monitoring as the handoff. Do not relay the callback through another child.
+- Claude is stuck in a wait after a normal-priority correction appears on screen: resend the same file pointer with `python3 {skill-dir}/scripts/claude_queue.py --priority now {claude-pid} "{same-file-pointer}"`. Use immediate priority only for a verified stall.
 - Codex turn interrupted: after the surface visibly returns to `Ready`, use cmux typing for the recovery pointer; do not assume an old or newly queued message will auto-start.
 - Transport unavailable: use cmux typing as recovery, not as the normal Claude or Codex channel.
 - Process exited: relaunch in a new tab with a fresh identifier and recovery brief.

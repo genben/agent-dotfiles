@@ -11,15 +11,19 @@ The orchestrator's brief gives the lead:
 - repository instructions and source evidence;
 - authorized edits and external actions;
 - dependencies, shared resources, and owner checkpoints;
-- worklog, result, and parent callback paths.
+- worklog, result, and parent callback paths;
+- the typed cmux workspace ref and its designation as the lead's member workspace;
+- every task skill required for implementation, review, commits, PR descriptions, testing, or release work.
 
 Mark settled owner decisions as settled. The lead reports new scope or policy questions instead of deciding them for the owner.
 
 ## Plan and staff the team
 
-The lead inspects the worktree and records a concrete plan in its worklog. It creates only the roles the work needs. Parallel assignments must have disjoint ownership or a declared handoff order.
+The lead starts its worklog before staffing the team and appends state transitions as they happen. It inspects the worktree, records a concrete plan, and creates only the roles the work needs. Parallel assignments must have disjoint ownership or a declared handoff order.
 
-Every member brief contains one bounded task, acceptance checks, writable paths, worklog and result paths, and the callback to the lead. The lead uses `orchestrate-agents-in-cmux` for all session mechanics.
+Every member brief contains one bounded task, acceptance checks, writable paths, worklog and result paths, the callback to the lead, and the task skills that member must use. The lead uses `orchestrate-agents-in-cmux` for all session mechanics and controls only its assigned team workspace.
+
+Match the turn structure to the assignment. For a one-turn assignment, the member publishes any required handshake and continues working. Use a ready callback and a separate go-ahead turn only when the lead must supply a later addendum.
 
 ## Implement and inspect
 
