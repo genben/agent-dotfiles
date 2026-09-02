@@ -12,14 +12,15 @@ Run independent reviewers, validate their findings, and deliver one evidence-bac
 | Id prefix | Harness | Model | Effort |
 | --- | --- | --- | --- |
 | `claude-opus-N` | Claude Code | `opus` | xhigh |
+| `claude-fable-N` | Claude Code | `fable[1m]` | high |
 | `codex-N` | Codex | `gpt-5.6-sol` | xhigh |
-| `cursor-N` | Cursor | `kimi-k3-max` | max |
-| `claude-fable-N` | Claude Code | `fable-5` | high |
+| `cursor-kimi-N` | Cursor | `kimi-k3-max` | max |
+| `cursor-grok-N` | Cursor | `grok-4.6-fast` | xhigh |
 
-- For an arena or unspecified multi-review request, use Opus, Codex, and Cursor.
-- If the user names one or more harnesses, use only those harnesses.
-- Add Fable only when the user explicitly requests it.
-- Pass effort explicitly. For Claude Opus, use the `opus` alias, which selects the 1M-context build. Bare Opus model ids can select a smaller context window.
+- For an arena or unspecified multi-review request, use `claude-opus`, `codex`, and `cursor-kimi`.
+- If the user names one or more harnesses, use only those harnesses' models.
+- Add `claude-fable` or `cursor-grok` only when the user explicitly requests more reviewers.
+- Pass effort explicitly. Both Claude aliases resolve to the latest release, but only `opus` implies the 1M-context build. The `fable` alias resolves to a 200K window, so write `fable[1m]` to give that reviewer the full context.
 
 ## Start and control reviewers
 
