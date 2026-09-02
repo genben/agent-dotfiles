@@ -1,113 +1,102 @@
 ---
 name: interrogate
-description: "Use for \"interrogate\", \"adversarial review\", \"multi-model review\", \"challenge this\", \"stress test this code\", \"find blind spots\", or \"tear this apart\". Multiple LLM reviewers challenge changes from independent angles."
+description: "Use for \"interrogate\", \"adversarial review\", \"multi-model review\", \"challenge this\", \"stress test this code\", \"find blind spots\", or \"tear this apart\". Independent Claude Code, Codex, and Cursor reviewers attack the same change from different angles."
 disable-model-invocation: true
 ---
 
 # Interrogate
 
-Spawn one reviewer per configured model to adversarially review code changes. Each model gets the same prompt and rubric. The adversarial signal comes from model diversity, not assigned personas. Models differ in blind spots, priors, and reasoning patterns. Agreement across models is high-confidence signal; lone-model findings are worth reading but lower confidence.
+Run one adversarial reviewer per model against the same change, then deliver one synthesized verdict. The adversarial signal comes from model diversity, not from assigned personas. Models differ in blind spots, priors, and reasoning patterns. A harness is only where a model runs; one harness can host several models. Agreement across reviewers is high-confidence signal; a lone finding is worth reading at lower confidence.
 
-The deliverable is a synthesized verdict. Do NOT auto-apply changes.
+The deliverable is a verdict. Never auto-apply changes, and reviewers never edit the code under review.
 
-## Step 1, Determine Scope
+Use `code-review-arena` instead when findings need cross-validation, rebuttal, and routing into PRs. Interrogate stops at lead judgment.
 
-Identify what to review from context:
+## Step 1, Resolve the target
 
-- If the user points at specific files or a diff, use that
-- If on a feature branch, run `git diff main...HEAD` (or the appropriate base branch) for the full changeset
-- If the user's message references recent work, gather the relevant files
+- Use the PR, branch, diff range, files, or working tree the user named.
+- If the target is unspecified, use the current branch's open PR. Fall back to `git diff {base}...HEAD` on a feature branch. Ask for a target when neither exists.
+- Name the exact review command in every brief, such as `gh pr diff {n}`, `git diff main...HEAD`, or `git diff HEAD`. Reviewers run it themselves; do not paste the diff into a brief.
+- Note the surrounding files a reviewer needs to judge the change, such as callers, type definitions, and sibling modules.
 
-Package the diff (or file contents) plus any surrounding context files the reviewers need to understand the code.
+## Step 2, State the intent
 
-## Step 2, State the Intent
+Before launch, write one paragraph on what this change is trying to accomplish. Derive it from the user's message, the commits, the PR description, and the code. Reviewers challenge whether the work achieves the intent well, not whether the intent is correct. Ask the user when the intent is unclear.
 
-Before spawning reviewers, state the intent explicitly. What is this code trying to accomplish? Derive this from:
+## Step 3, Launch reviewers
 
-- The user's message
-- Commit messages
-- PR description if one exists
-- The code itself
+| Id prefix | Harness | Model | Effort |
+| --- | --- | --- | --- |
+| `claude-opus-N` | Claude Code | `opus` | xhigh |
+| `claude-fable-N` | Claude Code | `fable[1m]` | high |
+| `codex-N` | Codex | `gpt-5.6-sol` | xhigh |
+| `cursor-kimi-N` | Cursor | `kimi-k3-max` | max |
+| `cursor-grok-N` | Cursor | `grok-4.6-fast` | xhigh |
 
-Write one clear paragraph. Reviewers challenge whether the work achieves the intent well, not whether the intent itself is correct. If you're unsure about the intent, ask the user before proceeding.
+- One reviewer per model. A second reviewer on the same model adds cost, not signal.
+- Use `claude-opus`, `codex`, and `cursor-kimi` by default: three models spanning three harnesses.
+- Widen with `cursor-grok` or `claude-fable` when the user asks for more reviewers or the change warrants deeper coverage. Both reuse a harness already in the roster, so they cost a tab, not a new integration.
+- If the user names models, use exactly those. If the user names harnesses, use those harnesses' models.
+- Pass effort explicitly. Both Claude aliases resolve to the latest release, but only `opus` implies the 1M-context build. The `fable` alias resolves to a 200K window, so write `fable[1m]` to give that reviewer the full context.
 
-## Step 3, Spawn Reviewers
+Use `orchestrate-agents-in-cmux` for cmux detection, artifact layout, launch commands, identifiers, messaging, callbacks, supervision, and recovery. Read its cmux operations reference before launch and its messaging reference before the first send.
 
-Launch all reviewers in a single message using the Task tool. Use the `interrogate reviewers` list from `~/.cursor/rules/pstack-models.mdc` when present, one reviewer per entry, extending or shrinking the Reviewer A/B/C/D labels below to the configured entry count; otherwise use the table defaults.
+- Use one cmux workspace for the interrogation and one tab per reviewer.
+- Pass the model and effort from the roster to the launch command templates.
+- For Codex, use the normal TUI. Do not use `codex exec review`, which imposes a different report format and sandbox.
+- Keep each reviewer session open until the verdict ships, so you can ask a reviewer to substantiate a finding during judgment.
+- If this process is not inside cmux, report that this workflow requires cmux and stop.
 
-| Subagent | Default model |
-|----------|---------------|
-| Reviewer A | `claude-fable-5-1-thinking-max` |
-| Reviewer B | `gpt-5.6-sol-max` |
-| Reviewer C | `grok-4.6-fast-xhigh` |
-| Reviewer D | `claude-opus-5-thinking-xhigh` |
+Write one brief per reviewer from [`references/reviewer-prompt.md`](references/reviewer-prompt.md), filled with the intent, the review command, the rubric in [`references/rubric.md`](references/rubric.md), and the code-quality lens in [`references/code-quality-review.md`](references/code-quality-review.md). Every reviewer gets the same rubric and lens; only the id prefix and file paths differ.
 
-For each reviewer:
-- `subagent_type`: `generalPurpose`
-- `model`: the configured `interrogate reviewers` entry, or the table default with no configured line
-- `readonly`: `true`
-
-If a model slug is rejected as unresolvable when you try to spawn the subagent, check the valid slugs in the Task tool's error message, pick the closest equivalent (prefer the highest-reasoning tier of the same family), spawn with the valid slug, and open a separate PR to update the configured value or default table. Do not block the review on the slug issue. If the configured value is `inherit-parent` or `auto`, omit `model` instead; never treat those aliases as broken slugs or enter this fallback for them.
-
-Read `references/reviewer-prompt.md` and fill in the template with:
-1. The stated intent
-2. The diff or file contents
-3. The review rubric from `references/rubric.md`
-4. The code-quality lens from `references/code-quality-review.md`
-
-The same filled template goes to all reviewers, so every model applies the code-quality lens.
-
-Each reviewer produces structured findings as described in the prompt template.
+Blind rule: no reviewer reads another reviewer's result before writing its own.
 
 ## Step 4, Synthesize
 
-As results come back, build a unified picture:
+Once every result file exists:
 
-1. **Parse all findings** from the reviewers
-2. **Identify consensus**. Findings raised by 2+ models independently are highest signal.
-3. **Identify lone-model findings**. Still worth reading, but weight accordingly.
-4. **Deduplicate**. Different models may describe the same issue differently. Merge these and note which models raised it.
-5. **Note disagreements**. If one model flags something and another explicitly says the opposite, that's useful context for the verdict.
+1. **Parse all findings** from the result files.
+2. **Identify consensus.** Findings raised by two or more reviewers independently are the highest signal.
+3. **Identify lone findings.** Still worth reading, but weight accordingly.
+4. **Deduplicate.** Merge findings with the same root cause and preserve every originating id in `found-by`.
+5. **Note disagreements.** One reviewer flagging what another explicitly cleared is useful context for the verdict.
 
-## Step 5, Lead Judgment
+Attribute by reviewer id, never by harness. Two models on one harness are two independent reviewers, and consensus between them counts the same as consensus across harnesses.
+
+## Step 5, Lead judgment
 
 You are the lead reviewer, a pragmatic senior engineer, not a neutral aggregator.
 
-Read `references/lead-judgment.md` for the full framework. Reviewers only see a slice of the codebase. You have the full context (the goal, the constraints, the timeline, which tradeoffs were already considered). Use that context aggressively.
+Read [`references/lead-judgment.md`](references/lead-judgment.md) for the full framework. Reviewers only see a slice of the codebase. You have the full context: the goal, the constraints, the timeline, and which tradeoffs were already considered. Use that context aggressively.
 
-Categorize every finding using these buckets:
+Categorize every finding:
 
-- **Act on**. Real issues affecting correctness, security, or maintainability given the actual goals. These would block a real PR.
-- **Consider**. Legitimate points, but you're not sure they outweigh the cost of addressing them right now. Worth the user's attention.
-- **Noted**. Technically valid but not actionable. Context-dependent, premature optimization, or low-impact given the current stage.
-- **Dismissed**. Wrong, nitpicky, or missing context. Brief explanation why.
+- **Act on.** Real issues affecting correctness, security, or maintainability given the actual goals. These would block a real PR.
+- **Consider.** Legitimate points where the fix may not be worth its cost right now. Worth the user's attention.
+- **Noted.** Technically valid but not actionable. Context-dependent, premature, or low-impact at this stage.
+- **Dismissed.** Wrong, nitpicky, or missing context. Say briefly why.
 
-For each finding, include:
-- Which model(s) raised it
-- The category (act on / consider / noted / dismissed)
-- A one-line rationale for the categorization
+For each finding, give the originating ids, the category, and a one-line rationale for the categorization.
 
-## Output Format
-
-Present the verdict in this structure:
+## Output format
 
 ### Intent
-> [The stated intent paragraph from Step 2]
+> [The intent paragraph from Step 2]
 
 ### Reviewers
-- Reviewer [label]: [model name], [N findings] (one bullet per reviewer)
+- `{id}`: {harness}, {model}, {N} findings (one bullet per reviewer)
 
-### Act On
-[Findings that should be addressed. For each: description, which models raised it, why it matters.]
+### Act on
+[Findings to address. For each: description, `found-by`, why it matters.]
 
 ### Consider
-[Findings worth thinking about. For each: description, which models raised it, tradeoff involved.]
+[Findings worth thinking about. For each: description, `found-by`, the tradeoff.]
 
 ### Noted
 [Valid but low-priority. Brief list.]
 
 ### Dismissed
-[Rejected findings with brief rationale. This shows the user what was filtered out and why, so they can override your judgment if they disagree.]
+[Rejected findings with brief rationale, so the user can override your judgment.]
 
-### Agreement Map
-[Where did models agree, where did they diverge, and what does the pattern of agreement/disagreement tell us?]
+### Agreement map
+[Where reviewers agreed, where they diverged, and what that pattern says about the change.]
