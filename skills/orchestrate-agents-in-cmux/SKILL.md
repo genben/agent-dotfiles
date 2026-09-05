@@ -48,7 +48,7 @@ A cmux tab is for work that must persist, stay visible to the user, or write to 
 - Perform one cmux mutation per shell call. Require exit status `0`; parse JSON commands for their refs, and require `OK` from commands whose documented response is `OK`.
 - Address workspaces and surfaces by typed refs, never bare numbers.
 - Pass `--focus false`. Never select, focus, reorder, close, or repurpose the user's workspaces or tabs.
-- Never terminate an agent. Relaunch a failed role in a new tab named `{role} (2)`.
+- Never terminate a working agent. Relaunch a failed role in a new tab named `{role} (2)`. The one exception is a stalled, context-heavy session: retire it before its replacement starts, as described under Supervision in [references/cmux-operations.md](references/cmux-operations.md).
 - Treat callbacks and result files as evidence of completion. Use `cmux read-screen` only to launch, handle a visible prompt, or diagnose a stall.
 - Before launching an externally hosted harness, obtain any required user authorization for the named service and scoped files during preflight.
 

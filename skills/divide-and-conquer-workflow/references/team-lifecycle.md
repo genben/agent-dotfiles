@@ -62,3 +62,5 @@ Write the result before sending its absolute path to the orchestrator.
 ## Recover failed roles
 
 The lead replaces a failed member. The orchestrator replaces a failed lead. Start the replacement in a new tab and base its recovery brief on verified worktree state, worklogs, and result files rather than the failed session's last message.
+
+Treat a stall as failure once it passes 30 minutes with no worklog, repository, or callback activity and the session's context is above roughly 200K tokens. Hand off to a fresh session rather than resuming that one, and retire the stalled session before the replacement starts so the two never hold the same worktree. `orchestrate-agents-in-cmux` owns the procedure.

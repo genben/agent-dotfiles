@@ -104,6 +104,17 @@ At least every five minutes, check each working agent:
 4. If a busy agent is unchanged across two checks, inspect its recorded surface and send a progress request. Repeated self-polling or repeated waiting is not progress. If it reports a hung command, tell it to interrupt and retry.
 5. If the terminal visibly exited or the surface is unreachable and no other signal shows progress, open a new `{role} (2)` tab with a recovery brief describing verified completed work and remaining work.
 
+### Replace a stalled, context-heavy session
+
+When an agent has shown no worklog, repository, or callback activity for more than 30 minutes and its context is above roughly 200K tokens, judged from its own last report or its session transcript, do not try to resume it. A session that large recovers slowly and rarely recovers well. Replace it instead, in this order:
+
+1. Reconstruct verified state from the worktree, worklog, and result files, never from the stalled session's last message.
+2. Write the handoff brief covering completed work, remaining work, and the acceptance checks still open.
+3. Stop the old agent and confirm it stopped. Interrupt with `cmux send-key ... Escape`, then ask it to exit. For a Claude session that ignores both, resolve its PID with [scripts/find_claude_pid.py](../scripts/find_claude_pid.py) and terminate that process.
+4. Only then launch the replacement in a `{role} (2)` tab and record its new identifiers.
+
+Never skip step 3. Two agents holding the same worktree overwrite each other's edits, and the stalled one can wake up mid-handoff.
+
 For Claude, inspect native peer status, worklog, and result. For Codex, inspect thread callbacks, worklog, and result. For Cursor, inspect the recorded chat UUID, worklog, and result. Use `cmux read-screen` to diagnose a stalled tab. `cmux surface-health` returning `in_window=false` does not prove the terminal is dead.
 
 Interrupt a visibly stuck terminal with `cmux send-key ... Escape`; `C-c` is not a valid key name. After interrupting Codex, wait for a visible `Ready` prompt. If queued messages do not start, type the addendum pointer through cmux and press Enter instead of trusting the old queue.
@@ -116,4 +127,4 @@ Surviving tabs may be detached dead terminals. If `read-screen` fails, `surface-
 cmux surface-health --workspace {workspace_ref}
 ```
 
-Do not infer death from `in_window=false`; live TUI tabs can report it. Relaunch only when the recorded surface is unreachable or visibly exited and callbacks, worklogs, and results show no continuing progress. Leave the old tab in place and refresh the relaunched agent's identifiers.
+Do not infer death from `in_window=false`; live TUI tabs can report it. Relaunch only when the recorded surface is unreachable or visibly exited and callbacks, worklogs, and results show no continuing progress. Leave the old tab in place and refresh the relaunched agent's identifiers. A tab left in place must hold no live agent; retire a stalled session first, as described under Supervision.
