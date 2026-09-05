@@ -25,10 +25,20 @@ Use `CMUX_WORKSPACE_ID` and `CMUX_SURFACE_ID` as targeting hints when present, n
 
 - Put the detailed assignment and work plan in a brief. Send the agent only a short action and the absolute brief path.
 - Give the agent a worklog path. Require its first action to create a meaningful entry, then append handoffs, state changes, surprises, discoveries, and plan deviations as they happen. Do not pre-create an empty worklog.
+- Worklogs and every other running log are append-only. Add each entry with a shell append redirect (`cat >> {path} <<'EOF'`). This is the one file write where a heredoc beats `Edit`, because only the new entry enters the context. Never rewrite a log in full and never revise or delete an earlier entry; correct a mistake by appending a dated correction. A rewrite costs the log's whole length on every update and destroys the audit trail the parent verifies against.
 - Give the agent a separate result path. Require it to persist the final result there before sending a short completion message with the path.
 - Record callback receipt and delivery evidence in the orchestrator's worklog; the child's result cannot report the outcome of a callback sent afterward.
 - Keep `SendMessage`, `codex queue`, and cmux-typed messages to file references, state changes, questions, and short check-ins. Put complex instructions, findings, and reports in files.
 - Unless the user chooses another location, keep briefs, addenda, worklogs, results, and handshake files under `~/.agents-orchestration/{repo}/{branch}/` (choose the appropriate files/dirs organization).
+
+## Delegate exploration to in-process sub-agents
+
+A cmux tab is for work that must persist, stay visible to the user, or write to the repository. Bounded read-only investigation needs none of that. Run it as an in-process sub-agent instead. Doing so is encouraged: the sub-agent's reading stays in its own context and only its answer enters yours, so a thirty-file survey costs you a summary rather than thirty file dumps.
+
+- Delegate surveying a subsystem, locating a pattern across files, inventorying call sites, checking how a convention is applied, and gathering evidence for a decision. Ask for a distilled answer with `file:line` pointers, not a transcript.
+- Match the model to the task and do not spend the orchestration model on a file sweep. Use Sonnet for mechanical search, inventory, and lookup; use Opus when the survey needs judgment, synthesis, or a design read.
+- Launch independent sub-agents in one message so they run concurrently.
+- Keep implementation, review, and anything the user must be able to steer or interrupt in a cmux session.
 
 ## Rules
 

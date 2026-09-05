@@ -19,7 +19,7 @@ Mark settled owner decisions as settled. The lead reports new scope or policy qu
 
 ## Plan and staff the team
 
-The lead starts its worklog before staffing the team and appends state transitions as they happen. It inspects the worktree, records a concrete plan, and creates only the roles the work needs. Parallel assignments must have disjoint ownership or a declared handoff order.
+The lead starts its worklog before staffing the team and appends state transitions as they happen. It only ever appends; it never rewrites the worklog or edits an earlier entry. It inspects the worktree, records a concrete plan, and creates only the roles the work needs. Parallel assignments must have disjoint ownership or a declared handoff order.
 
 Every member brief contains one bounded task, acceptance checks, writable paths, worklog and result paths, the callback to the lead, and the task skills that member must use. The lead uses `orchestrate-agents-in-cmux` for all session mechanics and controls only its assigned team workspace.
 

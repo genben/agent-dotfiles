@@ -69,6 +69,8 @@ For each finding, provide:
 
 Append to `{WORKLOG_PATH}`. Your first action is a meaningful entry, not an empty file. Record what you probed, what you ruled out, and anything surprising.
 
+Add every entry with `cat >> {WORKLOG_PATH} <<'EOF'`. Never rewrite the file and never change an earlier entry.
+
 ## Result
 
 Write your findings to `{RESULT_PATH}` in this shape, then send a short completion message naming that path.

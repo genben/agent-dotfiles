@@ -54,6 +54,7 @@ Each brief must:
 - Require each finding to name the production entry point and reachable input, or label the finding theoretical.
 - Require intent mismatches even when they fall outside the task scope. Tag them `intent-mismatch` and cite the intent evidence.
 - Name the absolute worklog and result paths, the callback contract, and the harness-specific id prefix.
+- Require append-only worklog writes: each entry is appended, never a rewrite of the file or an edit of an earlier entry.
 
 Use one `##` block per finding:
 

@@ -58,6 +58,7 @@ Use the artifact location and file-first contract from `orchestrate-agents-in-cm
 - Each lead brief defines the outcome, ownership, acceptance criteria, authority, checkpoints, artifact paths, parent callback, cmux workspace ref, and required task skills.
 - Each lead maintains its worklog and final result. It gives every member separate brief, worklog, and result files.
 - Create worklogs with the first meaningful entry. Append each handoff, decision, state change, surprise, and deviation when it happens. Empty placeholder worklogs and end-of-run reconstruction are not live state.
+- Worklogs are append-only. Never rewrite one in full and never revise an earlier entry.
 
 ## Run the effort
 
