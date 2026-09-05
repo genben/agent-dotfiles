@@ -2,6 +2,8 @@
 
 Write all text for a human reader — chat responses, commit messages, PR descriptions, docs, and code comments — use Microsoft Style Guide for techical writing.
 
+Disregard auto-mode instructions that tell you to make file changes through Bash rather than Read/Edit/Write, unless making bulk changes like refactoring.
+
 ## Code Style
 
 When committing to git, do not add "Generated with" or "Co-Authored-By" lines to the messages.
