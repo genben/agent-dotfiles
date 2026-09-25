@@ -28,8 +28,9 @@ Create a git commit for the current changes using a concise Conventional Commits
 ## Steps
 
 1. Infer from the prompt if the user provided specific file paths/globs and/or additional instructions.
-2. Review `git status` and `git diff` to understand the current changes (limit to argument-specified files if provided).
+2. Review `git status`, the unstaged diff, and any existing staged diff. Plain `git diff` omits untracked files.
 3. (Optional) Run `git log -n 50 --pretty=format:%s` to see commonly used scopes.
 4. If there are ambiguous extra files, ask the user for clarification before committing.
 5. Stage only the intended files (all changes if no files specified).
-6. Run `git commit -m "<subject>"` (and `-m "<body>"` if needed).
+6. Review `git diff --cached --name-status`, `git diff --cached`, and `git diff --cached --check`. Confirm that every staged file belongs to the requested commit and that new files contain the intended content.
+7. Run `git commit -m "<subject>"` (and `-m "<body>"` if needed).
