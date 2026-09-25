@@ -20,4 +20,9 @@ This repository contains AI coding agent configurations (skills, config files) t
 ./uninstall.sh pi                 # Remove symlinks
 ```
 
+`install.ps1` / `uninstall.ps1` are the Windows PowerShell equivalents, with the same
+arguments (`.\install.ps1 claude -n`). Keep the two versions in sync when changing the
+mappings. On Windows, directories fall back to junctions and files to hard links when
+symlink creation is not permitted.
+
 All scripts are idempotent and can be safely re-run.
