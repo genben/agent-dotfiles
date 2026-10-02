@@ -1,3 +1,5 @@
 .claude/settings.local.json
 # show-me skill install writes here through the ~/.claude/skills and ~/.agents/skills symlinks
 skills/show-me/
+# Skills synced by Claude Code from the claude.ai account
+skills/synced/
