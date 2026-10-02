@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>@@TITLE@@</title>
+<style>@@CSS@@</style>
+</head>
+<body>
+<header>
+<div class="header-row"><div><div class="eyebrow" id="subtitle"></div><h1 id="title"></h1><p class="muted" id="intro"></p></div>
+<div class="toolbar" aria-label="Save and export"><button id="export-md" class="primary">Export feedback</button><button id="export-json">Backup JSON</button><button id="import-btn">Import JSON</button></div></div>
+<div class="statusline"><span id="save-status" role="status">Opening your review…</span><span>Feedback stays in this browser. Share an export to return your decisions.</span></div>
+</header>
+<div class="layout">
+<aside aria-label="Review navigation">
+<div class="progress-label"><strong id="progress-text"></strong><span id="flag-count"></span></div><progress id="progress" value="0" aria-label="Review progress"></progress>
+<div class="filters"><label class="sr-only" for="search">Search review items</label><input id="search" type="search" placeholder="Search questions or comments…"><div class="filterrow"><label class="sr-only" for="group-filter">Filter by category</label><select id="group-filter"></select><label class="sr-only" for="status-filter">Filter by decision</label><select id="status-filter"><option value="all">All statuses</option><option value="pending">No decision</option><option value="selected">Approach chosen</option><option value="flagged">Follow-up needed</option></select></div></div>
+<nav id="nav" class="navlist" aria-label="Review items"></nav>
+</aside>
+<main id="main"><div class="main-head"><span id="position"></span><div class="buttons"><button id="next-pending">Next undecided</button><button id="summary-button">Decision summary</button></div></div>
+<div class="notice" id="notice"></div><div id="content"></div></main>
+</div>
+<input id="import-file" type="file" accept="application/json,.json" aria-label="Import decision backup">
+<div id="toast" role="status" aria-live="polite" hidden></div>
+<noscript>This decision sheet needs JavaScript. The questions are embedded in the HTML; no server is required.</noscript>
+<script id="review-data" type="application/json">@@DATA@@</script>
+<script>@@JS@@</script>
+</body>
+</html>

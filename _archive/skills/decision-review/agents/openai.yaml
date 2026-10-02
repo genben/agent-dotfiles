@@ -1,0 +1,4 @@
+interface:
+  display_name: "Decision Review"
+  short_description: "Interactive decision sheets with durable feedback"
+  default_prompt: "Use $decision-review to create an interactive HTML review of these decisions."

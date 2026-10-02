@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "reviewId": "decision-review-example",
+  "title": "Decision review: example",
+  "subtitle": "Reusable review layout \u00b7 Example content",
+  "intro": "Review the practical scenario, choose an approach, and leave your reasoning. Nothing is preselected.",
+  "notice": "These fictional questions demonstrate the layout. They are not pending decisions for your project.",
+  "items": [
+    {
+      "id": "D01",
+      "title": "How should reviewers receive the artifact?",
+      "group": "Delivery",
+      "decision": "Choose how to package a review for another person.",
+      "problem": "This is a fictional example for demonstrating the review interface. Media files must stay next to the HTML.",
+      "scenario": "A reviewer receives the questions and two screenshots, then opens the review while offline.",
+      "recommendation": "Share the complete directory as a ZIP when attachments are allowed. It keeps the HTML and media together.",
+      "question": "Which delivery format fits the workflow?",
+      "definitions": [],
+      "checks": [
+        "The recipient can open the HTML and see every image without a network connection.",
+        "Choices and comments remain after reloading the same page in the same browser."
+      ],
+      "evidence": [],
+      "related": [
+        "D02"
+      ],
+      "media": [],
+      "options": [
+        {
+          "id": "zip",
+          "title": "Share a ZIP of the complete folder",
+          "detail": "The recipient extracts the folder and opens review.html.",
+          "cost": "The recipient must extract the archive before opening it.",
+          "recommended": true,
+          "proposal": {
+            "steps": [
+              "Package review.html, review.json, the manifest, and assets together.",
+              "Send the archive through the existing authorized sharing channel."
+            ],
+            "failure": "If attachments are blocked, the review remains local until another sharing method is chosen.",
+            "scope": "Packaging the artifact; external delivery still follows the user's instructions.",
+            "data": []
+          }
+        },
+        {
+          "id": "shared-folder",
+          "title": "Use a shared folder",
+          "detail": "Place the complete bundle in an existing shared directory.",
+          "cost": "Reviewers need access to that directory and may need to download it for offline use.",
+          "proposal": {
+            "steps": [
+              "Copy the complete bundle into the agreed directory.",
+              "Give the reviewer the HTML location and tell them to keep the assets folder beside it."
+            ],
+            "failure": "A reviewer without access cannot open the bundle until access is resolved.",
+            "scope": "Using an existing shared destination; no new public hosting.",
+            "data": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "D02",
+      "title": "What feedback should the reviewer return?",
+      "group": "Feedback",
+      "decision": "Choose the normal handoff format after the review.",
+      "problem": "Readable feedback and resumable browser state serve different purposes.",
+      "scenario": "The reviewer has selected one option and left a question on another. The author needs to act on both.",
+      "recommendation": "Return Markdown for discussion and keep JSON as a backup. Send both when someone else needs to resume editing.",
+      "question": "What should the handoff include?",
+      "definitions": [],
+      "checks": [
+        "The Markdown export includes the selected option, comment, and unresolved question.",
+        "Importing the JSON into an unchanged review restores all choices and comments."
+      ],
+      "evidence": [],
+      "related": [
+        "D01"
+      ],
+      "media": [],
+      "options": [
+        {
+          "id": "markdown",
+          "title": "Return readable Markdown",
+          "detail": "Send Export feedback output and keep a personal JSON backup.",
+          "cost": "The recipient can read the feedback but cannot restore editable state from Markdown alone.",
+          "recommended": true,
+          "proposal": {
+            "steps": [
+              "Export feedback after reviewing the summary.",
+              "Download Backup JSON for personal recovery."
+            ],
+            "failure": "If the editable state is lost, restore it from the saved JSON backup.",
+            "scope": "A readable feedback handoff; no automatic implementation approval.",
+            "data": []
+          }
+        },
+        {
+          "id": "both",
+          "title": "Return Markdown and JSON",
+          "detail": "Send both exports so the recipient can read or resume the review.",
+          "cost": "Two files must be kept together with the matching version of the review.",
+          "proposal": {
+            "steps": [
+              "Download both exports.",
+              "Identify the review version when returning the two files."
+            ],
+            "failure": "A backup from a changed review is rejected instead of applying choices to different proposals.",
+            "scope": "Readable feedback plus resumable state for the exact reviewed content.",
+            "data": []
+          }
+        }
+      ]
+    }
+  ]
+}

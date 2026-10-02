@@ -1,6 +1,6 @@
 <!-- Audience: readers who don't read code — the product owner deciding priorities, support triaging user reports, the writer compiling release notes. Reviewers read the diff itself; never recite it: no inventories of changed files or functions. Mention a file or module only when it orients the reader or requires action (config, migration, public API).
 State each fact once, in the section that owns it.
-Keep the whole description under one screen (about 300 words), excluding embedded evidence.
+Keep the whole description under one screen (about 300 words).
 No verification content: test results and check runs belong to CI, not here. -->
 
 <!-- H1: the PR branch name, verbatim. Second line: one sentence stating why the PR exists and how important it is — the kind of change and its stakes, not a summary of what the code does now. "Fixes a high-severity replication bug that silently drops updates between sites", not "The database now records when a row was written". For bug fixes, name the severity here. -->
@@ -18,7 +18,6 @@ No verification content: test results and check runs belong to CI, not here. -->
 ## 👀 What changes for users
 
 <!-- Observable behavior before vs. after, in plain language, with feature names as users see them in the product. No file or function names, no internal code names.
-For UI changes, embed the approved show-me evidence of the new or updated feature (public URLs published via the show-me skill): screenshots as images, recordings as plain links, before and after states as applicable. The captures must let a reviewer confirm the feature works and spot flaws by eye: a missing button, wrong text, misaligned elements. No diagrams or explainers here; explanation belongs to the prose sections.
 If nothing changes for users, write exactly "None." (only when true for the whole PR); release-notes compilation skips such PRs. -->
 
 ---
